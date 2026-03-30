@@ -11,3 +11,4 @@ scripts/__pycache__/
 *.docx
 .env*
 !.env.example
+.vercel

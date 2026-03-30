@@ -1,0 +1,10 @@
+node_modules
+.next
+tmp
+.venv-docx
+scripts/__pycache__
+*.log
+*.pdf
+*.doc
+*.docx
+.env*
