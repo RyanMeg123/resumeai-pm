@@ -1,0 +1,13 @@
+node_modules/
+.next/
+coverage/
+.DS_Store
+*.log
+tmp/
+.venv-docx/
+scripts/__pycache__/
+*.pdf
+*.doc
+*.docx
+.env*
+!.env.example
