@@ -8,12 +8,23 @@ import {
     Clock3,
     FileCheck2,
     Gauge,
+    LibraryBig,
     ListChecks,
+    LockKeyhole,
     RefreshCw,
     Sparkles,
+    Unlock,
 } from 'lucide-react'
 
-import { InterviewAnswerInput, InterviewEvaluation, InterviewQuestion } from '@/lib/interview-types'
+import {
+    InterviewAnswerInput,
+    InterviewEvaluation,
+    InterviewQuestion,
+} from '@/lib/interview-types'
+
+type PracticeMode = 'marathon' | 'cards'
+
+const MARATHON_COMPLETED_STORAGE_KEY = 'resumeai-pm-marathon-completed'
 
 function shuffle<T>(items: T[]) {
     const copy = [...items]
@@ -32,6 +43,197 @@ function formatDuration(totalSeconds: number) {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+function countAnswered(
+    questions: InterviewQuestion[],
+    answers: Record<string, string>,
+) {
+    return questions.filter((question) => answers[question.id]?.trim()).length
+}
+
+function ResultPanel({
+    title,
+    result,
+    onReset,
+    onRetry,
+    retryLabel,
+    extraAction,
+    extraHint,
+}: {
+    title: string
+    result: InterviewEvaluation
+    onReset: () => void
+    onRetry: () => void
+    retryLabel: string
+    extraAction?: React.ReactNode
+    extraHint?: string
+}) {
+    return (
+        <section className="mt-8 space-y-6">
+            <div className="rounded-[32px] border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <div className="text-sm text-text-muted">{title}</div>
+                        <div className="mt-2 text-5xl font-semibold">
+                            {result.overallScore}
+                        </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                            <div className="text-xs text-text-muted">完成度</div>
+                            <div className="mt-1 text-2xl font-semibold">
+                                {result.completionRate}%
+                            </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                            <div className="text-xs text-text-muted">已答题</div>
+                            <div className="mt-1 text-2xl font-semibold">
+                                {result.answeredQuestions}/{result.totalQuestions}
+                            </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                            <div className="text-xs text-text-muted">用时</div>
+                            <div className="mt-1 text-2xl font-semibold">
+                                {formatDuration(result.elapsedSeconds)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-[28px] border border-success/20 bg-success/10 p-5">
+                        <div className="flex items-center gap-3">
+                            <Brain className="h-5 w-5 text-success" />
+                            <h3 className="text-lg font-medium">
+                                这轮答得好的地方
+                            </h3>
+                        </div>
+                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-main/90">
+                            {result.strengths.map((item) => (
+                                <p key={item}>{item}</p>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="rounded-[28px] border border-warning/20 bg-warning/10 p-5">
+                        <div className="flex items-center gap-3">
+                            <FileCheck2 className="h-5 w-5 text-warning" />
+                            <h3 className="text-lg font-medium">
+                                下一轮优先补什么
+                            </h3>
+                        </div>
+                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-main/90">
+                            {result.nextActions.map((item) => (
+                                <p key={item}>{item}</p>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6">
+                    <h3 className="text-lg font-medium">模块得分</h3>
+                    <div className="mt-4 space-y-3">
+                        {result.categoryScores.map((item) => (
+                            <div key={item.category}>
+                                <div className="mb-1 flex items-center justify-between text-sm">
+                                    <span className="text-text-muted">
+                                        {item.category}
+                                    </span>
+                                    <span>{item.score}</span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-black/30">
+                                    <div
+                                        className="h-full rounded-full bg-primary"
+                                        style={{ width: `${item.score}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {extraHint && (
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-7 text-text-muted">
+                        {extraHint}
+                    </div>
+                )}
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                        onClick={onReset}
+                        className="rounded-full border border-white/10 px-5 py-2 text-sm text-text-main transition-colors hover:border-white/20"
+                    >
+                        重新开始
+                    </button>
+                    <button
+                        onClick={onRetry}
+                        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        {retryLabel}
+                    </button>
+                    {extraAction}
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                {result.questionResults.map((item, index) => (
+                    <div
+                        key={item.questionId}
+                        className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div className="text-sm text-primary">
+                                    {item.category}
+                                </div>
+                                <h3 className="mt-2 text-lg font-medium leading-7">
+                                    {index + 1}. {item.prompt}
+                                </h3>
+                            </div>
+                            <div
+                                className={`rounded-full px-4 py-2 text-sm font-medium ${
+                                    item.verdict === 'strong'
+                                        ? 'bg-success/15 text-success'
+                                        : item.verdict === 'solid'
+                                          ? 'bg-primary/15 text-primary'
+                                          : 'bg-error/15 text-error'
+                                }`}
+                            >
+                                {item.score} 分
+                            </div>
+                        </div>
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
+                            {item.answer || '这题未作答'}
+                        </div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
+                                <div className="text-sm font-medium">
+                                    做得好的地方
+                                </div>
+                                <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
+                                    {item.strengths.map((point) => (
+                                        <p key={point}>{point}</p>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="rounded-2xl border border-warning/15 bg-warning/10 p-4">
+                                <div className="text-sm font-medium">
+                                    还可以补强
+                                </div>
+                                <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
+                                    {item.improvements.map((point) => (
+                                        <p key={point}>{point}</p>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
+    )
+}
+
 export function InterviewPracticeClient({
     allQuestions,
 }: {
@@ -41,6 +243,27 @@ export function InterviewPracticeClient({
         () => Array.from(new Set(allQuestions.map((item) => item.category))),
         [allQuestions],
     )
+    const groupedQuestions = useMemo(
+        () =>
+            categories.map((category) => ({
+                category,
+                questions: allQuestions.filter((item) => item.category === category),
+            })),
+        [allQuestions, categories],
+    )
+
+    const [activeMode, setActiveMode] = useState<PracticeMode>('marathon')
+    const [marathonCompleted, setMarathonCompleted] = useState(false)
+
+    const [marathonAnswers, setMarathonAnswers] = useState<Record<string, string>>(
+        {},
+    )
+    const [marathonStartedAt, setMarathonStartedAt] = useState<number | null>(null)
+    const [marathonElapsedSeconds, setMarathonElapsedSeconds] = useState(0)
+    const [marathonSubmitting, setMarathonSubmitting] = useState(false)
+    const [marathonResult, setMarathonResult] =
+        useState<InterviewEvaluation | null>(null)
+
     const [selectedCategories, setSelectedCategories] = useState<string[]>(categories)
     const [questionCount, setQuestionCount] = useState(10)
     const [sessionQuestions, setSessionQuestions] = useState<InterviewQuestion[]>([])
@@ -50,6 +273,30 @@ export function InterviewPracticeClient({
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<InterviewEvaluation | null>(null)
+
+    useEffect(() => {
+        const storedValue = window.localStorage.getItem(
+            MARATHON_COMPLETED_STORAGE_KEY,
+        )
+
+        if (storedValue === 'true') {
+            setMarathonCompleted(true)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (!marathonStartedAt || marathonResult) {
+            return
+        }
+
+        const timer = window.setInterval(() => {
+            setMarathonElapsedSeconds(
+                Math.round((Date.now() - marathonStartedAt) / 1000),
+            )
+        }, 1000)
+
+        return () => window.clearInterval(timer)
+    }, [marathonStartedAt, marathonResult])
 
     useEffect(() => {
         if (!startedAt || result) {
@@ -73,13 +320,53 @@ export function InterviewPracticeClient({
         )
     }, [allQuestions, selectedCategories])
 
+    const marathonAnsweredCount = useMemo(
+        () => countAnswered(allQuestions, marathonAnswers),
+        [allQuestions, marathonAnswers],
+    )
     const answeredCount = useMemo(
-        () =>
-            sessionQuestions.filter((question) => answers[question.id]?.trim()).length,
+        () => countAnswered(sessionQuestions, answers),
         [answers, sessionQuestions],
     )
 
     const currentQuestion = sessionQuestions[currentIndex]
+
+    const requestEvaluation = async ({
+        questions,
+        answerMap,
+        totalElapsedSeconds,
+    }: {
+        questions: InterviewQuestion[]
+        answerMap: Record<string, string>
+        totalElapsedSeconds: number
+    }) => {
+        const payload = {
+            questionIds: questions.map((item) => item.id),
+            elapsedSeconds: totalElapsedSeconds,
+            answers: questions.map(
+                (question): InterviewAnswerInput => ({
+                    questionId: question.id,
+                    answer: answerMap[question.id] || '',
+                }),
+            ),
+        }
+
+        const response = await fetch('/api/interview-evaluate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        })
+
+        const evaluation = await response.json()
+
+        if (!response.ok) {
+            throw new Error(evaluation.error || '交卷失败')
+        }
+
+        return evaluation as InterviewEvaluation
+    }
 
     const toggleCategory = (category: string) => {
         setSelectedCategories((current) =>
@@ -87,6 +374,55 @@ export function InterviewPracticeClient({
                 ? current.filter((item) => item !== category)
                 : [...current, category],
         )
+    }
+
+    const startMarathon = () => {
+        setMarathonAnswers({})
+        setMarathonResult(null)
+        setMarathonElapsedSeconds(0)
+        setMarathonStartedAt(Date.now())
+    }
+
+    const resetMarathon = () => {
+        setMarathonAnswers({})
+        setMarathonResult(null)
+        setMarathonElapsedSeconds(0)
+        setMarathonStartedAt(null)
+    }
+
+    const submitMarathon = async () => {
+        if (allQuestions.length === 0) {
+            return
+        }
+
+        if (!marathonStartedAt) {
+            setMarathonStartedAt(Date.now())
+        }
+
+        setMarathonSubmitting(true)
+
+        try {
+            const evaluation = await requestEvaluation({
+                questions: allQuestions,
+                answerMap: marathonAnswers,
+                totalElapsedSeconds: marathonElapsedSeconds,
+            })
+
+            setMarathonResult(evaluation)
+
+            if (evaluation.answeredQuestions === evaluation.totalQuestions) {
+                setMarathonCompleted(true)
+                window.localStorage.setItem(
+                    MARATHON_COMPLETED_STORAGE_KEY,
+                    'true',
+                )
+            }
+        } catch (error) {
+            console.error(error)
+            alert('交卷失败，请稍后重试')
+        } finally {
+            setMarathonSubmitting(false)
+        }
     }
 
     const startSession = () => {
@@ -120,30 +456,11 @@ export function InterviewPracticeClient({
         setIsSubmitting(true)
 
         try {
-            const payload = {
-                questionIds: sessionQuestions.map((item) => item.id),
-                elapsedSeconds,
-                answers: sessionQuestions.map(
-                    (question): InterviewAnswerInput => ({
-                        questionId: question.id,
-                        answer: answers[question.id] || '',
-                    }),
-                ),
-            }
-
-            const response = await fetch('/api/interview-evaluate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
+            const evaluation = await requestEvaluation({
+                questions: sessionQuestions,
+                answerMap: answers,
+                totalElapsedSeconds: elapsedSeconds,
             })
-
-            const evaluation = await response.json()
-
-            if (!response.ok) {
-                throw new Error(evaluation.error || '交卷失败')
-            }
 
             setResult(evaluation)
         } catch (error) {
@@ -170,7 +487,7 @@ export function InterviewPracticeClient({
                             AI 产品经理面试练习场
                         </h1>
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted md:text-base">
-                            从 100 道高频题里抽题作答。你交卷后会看到总分、模块得分、逐题反馈和下一轮该补什么。
+                            先把 100 道高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
                         </p>
                     </div>
                     <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur md:block">
@@ -183,458 +500,666 @@ export function InterviewPracticeClient({
                     </div>
                 </div>
 
-                {sessionQuestions.length === 0 ? (
-                    <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
-                            <div className="flex items-center gap-3 text-primary">
-                                <Sparkles className="h-5 w-5" />
-                                <span className="text-sm font-medium">
-                                    刷题模式
-                                </span>
-                            </div>
-                            <div className="mt-5 grid gap-4 md:grid-cols-3">
-                                {[
-                                    {
-                                        label: '快速热身',
-                                        count: 5,
-                                        desc: '10 分钟内跑一轮',
-                                    },
-                                    {
-                                        label: '标准模拟',
-                                        count: 10,
-                                        desc: '更接近正式面试',
-                                    },
-                                    {
-                                        label: '深度拉练',
-                                        count: 15,
-                                        desc: '适合集中补短板',
-                                    },
-                                ].map((item) => (
-                                    <button
-                                        key={item.count}
-                                        onClick={() => setQuestionCount(item.count)}
-                                        className={`rounded-2xl border p-4 text-left transition-all ${
-                                            questionCount === item.count
-                                                ? 'border-primary bg-primary/10 shadow-[0_10px_30px_rgba(77,126,255,0.18)]'
-                                                : 'border-white/10 bg-black/10 hover:border-white/20 hover:bg-white/[0.03]'
-                                        }`}
-                                    >
-                                        <div className="text-base font-medium">
-                                            {item.label}
-                                        </div>
-                                        <div className="mt-1 text-3xl font-semibold">
-                                            {item.count}
-                                        </div>
-                                        <div className="mt-2 text-sm text-text-muted">
-                                            {item.desc}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
+                <div className="mb-8 flex flex-wrap gap-3">
+                    <button
+                        onClick={() => setActiveMode('marathon')}
+                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
+                            activeMode === 'marathon'
+                                ? 'border-primary bg-primary/10 text-text-main'
+                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
+                        }`}
+                    >
+                        <LibraryBig className="h-4 w-4" />
+                        100题全刷
+                    </button>
+                    <button
+                        onClick={() => marathonCompleted && setActiveMode('cards')}
+                        disabled={!marathonCompleted}
+                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
+                            activeMode === 'cards'
+                                ? 'border-primary bg-primary/10 text-text-main'
+                                : 'border-white/10 bg-white/[0.04] text-text-muted'
+                        } ${
+                            marathonCompleted
+                                ? 'hover:border-white/20 hover:text-text-main'
+                                : 'cursor-not-allowed opacity-60'
+                        }`}
+                    >
+                        {marathonCompleted ? (
+                            <Unlock className="h-4 w-4" />
+                        ) : (
+                            <LockKeyhole className="h-4 w-4" />
+                        )}
+                        抽卡式答题
+                    </button>
+                </div>
 
-                            <div className="mt-8">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="text-sm font-medium">
-                                        选择练习模块
+                {activeMode === 'marathon' ? (
+                    <>
+                        {!marathonStartedAt && !marathonResult ? (
+                            <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="flex items-center gap-3 text-primary">
+                                        <LibraryBig className="h-5 w-5" />
+                                        <span className="text-sm font-medium">
+                                            100题全刷模式
+                                        </span>
                                     </div>
-                                    <button
-                                        onClick={() => setSelectedCategories(categories)}
-                                        className="text-sm text-text-muted transition-colors hover:text-text-main"
-                                    >
-                                        全选
-                                    </button>
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    {categories.map((category) => {
-                                        const active =
-                                            selectedCategories.includes(category)
+                                    <div className="mt-5 grid gap-4 md:grid-cols-3">
+                                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                            <div className="text-sm text-text-muted">
+                                                总题量
+                                            </div>
+                                            <div className="mt-2 text-3xl font-semibold">
+                                                100
+                                            </div>
+                                            <div className="mt-2 text-sm text-text-muted">
+                                                一次性把高频面试题过完
+                                            </div>
+                                        </div>
+                                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                            <div className="text-sm text-text-muted">
+                                                模块数
+                                            </div>
+                                            <div className="mt-2 text-3xl font-semibold">
+                                                {categories.length}
+                                            </div>
+                                            <div className="mt-2 text-sm text-text-muted">
+                                                覆盖基础、Agent、商业和行为题
+                                            </div>
+                                        </div>
+                                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                            <div className="text-sm text-text-muted">
+                                                解锁
+                                            </div>
+                                            <div className="mt-2 text-3xl font-semibold">
+                                                抽卡
+                                            </div>
+                                            <div className="mt-2 text-sm text-text-muted">
+                                                全部交卷后开放精练模式
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                        return (
+                                    <div className="mt-8 rounded-[28px] border border-primary/20 bg-primary/10 p-5 text-sm leading-7 text-text-main/90">
+                                        这轮更像你给自己做一次完整摸底。先把全部题型都过一遍，知道自己薄弱在哪，再进抽卡模式反复补。
+                                    </div>
+
+                                    <div className="mt-8 flex flex-wrap items-center gap-4">
+                                        <button
+                                            onClick={startMarathon}
+                                            className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                        >
+                                            开始刷 100 题
+                                        </button>
+                                        {marathonCompleted && (
+                                            <div className="text-sm text-success">
+                                                你已经完成过一轮全刷，抽卡模式已解锁
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <div className="flex items-center gap-3 text-text-main">
+                                            <Gauge className="h-5 w-5 text-success" />
+                                            <h2 className="text-lg font-medium">
+                                                这轮结束后能得到什么
+                                            </h2>
+                                        </div>
+                                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                            <p>先拿到一张完整底图，知道自己最弱的是哪一块。</p>
+                                            <p>不是只看总分，还能看每个模块的高低。</p>
+                                            <p>全部交卷后，抽卡式答题会自动解锁。</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <div className="flex items-center gap-3 text-text-main">
+                                            <ListChecks className="h-5 w-5 text-primary" />
+                                            <h2 className="text-lg font-medium">
+                                                建议怎么刷
+                                            </h2>
+                                        </div>
+                                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                            <p>可以先每题写短版，确保 100 题都过一遍。</p>
+                                            <p>第二轮再回头补低分题，把答案拉得更完整。</p>
+                                            <p>行为题尽量写成真实经历，不要只讲原则。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        ) : (
+                            <section className="space-y-6">
+                                <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div className="flex flex-wrap items-center gap-4 text-sm text-text-muted">
+                                            <div className="inline-flex items-center gap-2">
+                                                <Clock3 className="h-4 w-4" />
+                                                已用时{' '}
+                                                {formatDuration(marathonElapsedSeconds)}
+                                            </div>
+                                            <div className="inline-flex items-center gap-2">
+                                                <Sparkles className="h-4 w-4 text-success" />
+                                                已完成 {marathonAnsweredCount}/
+                                                {allQuestions.length}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-3">
                                             <button
-                                                key={category}
-                                                onClick={() =>
-                                                    toggleCategory(category)
-                                                }
-                                                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                                                    active
-                                                        ? 'border-primary bg-primary/10 text-text-main'
-                                                        : 'border-white/10 bg-black/10 text-text-muted hover:border-white/20 hover:text-text-main'
-                                                }`}
+                                                onClick={resetMarathon}
+                                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20"
                                             >
-                                                {category}
+                                                从头开始
                                             </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="mt-8 flex flex-wrap items-center gap-4">
-                                <button
-                                    onClick={startSession}
-                                    disabled={
-                                        filteredBank.length === 0 ||
-                                        filteredBank.length < questionCount
-                                    }
-                                    className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
-                                >
-                                    开始这一轮
-                                </button>
-                                <div className="text-sm text-text-muted">
-                                    当前可抽题数：{filteredBank.length} 题
-                                </div>
-                            </div>
-                            {filteredBank.length < questionCount && (
-                                <p className="mt-3 text-sm text-warning">
-                                    当前模块数量不足，请减少题量或多选几个模块。
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
-                                <div className="flex items-center gap-3 text-text-main">
-                                    <Gauge className="h-5 w-5 text-success" />
-                                    <h2 className="text-lg font-medium">
-                                        交卷后你会拿到什么
-                                    </h2>
-                                </div>
-                                <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
-                                    <p>总分和完成度，先看这一轮整体状态。</p>
-                                    <p>模块得分，知道自己是卡在基础理解、Agent 还是商业判断。</p>
-                                    <p>逐题反馈，知道哪题能打，哪题还像空话。</p>
-                                </div>
-                            </div>
-
-                            <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
-                                <div className="flex items-center gap-3 text-text-main">
-                                    <ListChecks className="h-5 w-5 text-primary" />
-                                    <h2 className="text-lg font-medium">
-                                        建议答题方式
-                                    </h2>
-                                </div>
-                                <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
-                                    <p>先讲用户场景和目标，再讲你怎么判断、怎么取舍。</p>
-                                    <p>能给结果就给结果，哪怕是门槛、阈值或上线标准。</p>
-                                    <p>别只讲概念，最好让人听出你真的做过。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                ) : (
-                    <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-                        <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
-                            <div className="flex items-center gap-3 text-sm text-text-muted">
-                                <Clock3 className="h-4 w-4" />
-                                已用时 {formatDuration(elapsedSeconds)}
-                            </div>
-                            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                                <div className="text-sm text-text-muted">
-                                    已完成
-                                </div>
-                                <div className="mt-2 text-3xl font-semibold">
-                                    {answeredCount}/{sessionQuestions.length}
-                                </div>
-                            </div>
-
-                            <div className="mt-5 space-y-2">
-                                {sessionQuestions.map((question, index) => {
-                                    const answered =
-                                        answers[question.id]?.trim().length > 0
-
-                                    return (
-                                        <button
-                                            key={question.id}
-                                            onClick={() => setCurrentIndex(index)}
-                                            className={`w-full rounded-2xl border p-3 text-left transition-colors ${
-                                                currentIndex === index
-                                                    ? 'border-primary bg-primary/10'
-                                                    : 'border-white/10 bg-black/10 hover:border-white/20'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-sm font-medium">
-                                                    第 {index + 1} 题
-                                                </span>
-                                                <span
-                                                    className={`h-2.5 w-2.5 rounded-full ${
-                                                        answered
-                                                            ? 'bg-success'
-                                                            : 'bg-border'
-                                                    }`}
-                                                />
-                                            </div>
-                                            <div className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">
-                                                {question.prompt}
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </aside>
-
-                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div>
-                                    <div className="text-sm text-primary">
-                                        {currentQuestion.category}
+                                            <button
+                                                onClick={submitMarathon}
+                                                disabled={marathonSubmitting}
+                                                className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {marathonSubmitting
+                                                    ? '正在交卷...'
+                                                    : '交卷并评分'}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <h2 className="mt-2 text-2xl font-semibold leading-tight">
-                                        第 {currentIndex + 1} 题
-                                    </h2>
-                                </div>
-                                <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
-                                    题库编号 #{currentQuestion.index}
-                                </div>
-                            </div>
 
-                            <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
-                                <p className="text-lg leading-8 text-text-main">
-                                    {currentQuestion.prompt}
-                                </p>
-                            </div>
-
-                            <div className="mt-5">
-                                <label
-                                    htmlFor={currentQuestion.id}
-                                    className="mb-3 block text-sm font-medium text-text-muted"
-                                >
-                                    写下你的回答
-                                </label>
-                                <textarea
-                                    id={currentQuestion.id}
-                                    value={answers[currentQuestion.id] || ''}
-                                    onChange={(event) =>
-                                        setAnswers((current) => ({
-                                            ...current,
-                                            [currentQuestion.id]:
-                                                event.target.value,
-                                        }))
-                                    }
-                                    placeholder="建议按“场景/判断/方案/结果”来答。不是每题都要很长，但别只写一句话。"
-                                    className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
-                                />
-                            </div>
-
-                            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                                <div className="text-sm text-text-muted">
-                                    这一题当前字数：
-                                    {(answers[currentQuestion.id] || '')
-                                        .replace(/\s+/g, '')
-                                        .length}
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                    <button
-                                        onClick={() =>
-                                            setCurrentIndex((current) =>
-                                                Math.max(0, current - 1),
+                                    <div className="mt-5 flex flex-wrap gap-2">
+                                        {groupedQuestions.map((group) => {
+                                            const groupAnswered = countAnswered(
+                                                group.questions,
+                                                marathonAnswers,
                                             )
-                                        }
-                                        disabled={currentIndex === 0}
-                                        className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:text-text-muted"
-                                    >
-                                        上一题
-                                    </button>
-                                    {currentIndex < sessionQuestions.length - 1 ? (
-                                        <button
-                                            onClick={() =>
-                                                setCurrentIndex((current) =>
-                                                    Math.min(
-                                                        sessionQuestions.length -
-                                                            1,
-                                                        current + 1,
-                                                    ),
-                                                )
-                                            }
-                                            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+
+                                            return (
+                                                <a
+                                                    key={group.category}
+                                                    href={`#${group.category}`}
+                                                    className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
+                                                >
+                                                    {group.category} {groupAnswered}/
+                                                    {group.questions.length}
+                                                </a>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    {groupedQuestions.map((group) => (
+                                        <section
+                                            key={group.category}
+                                            id={group.category}
+                                            className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur"
                                         >
-                                            下一题
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={submitSession}
-                                            disabled={isSubmitting}
-                                            className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            {isSubmitting
-                                                ? '正在交卷...'
-                                                : '交卷并评分'}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                )}
-
-                {result && (
-                    <section className="mt-8 space-y-6">
-                        <div className="rounded-[32px] border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div>
-                                    <div className="text-sm text-text-muted">
-                                        本轮总分
-                                    </div>
-                                    <div className="mt-2 text-5xl font-semibold">
-                                        {result.overallScore}
-                                    </div>
-                                </div>
-                                <div className="grid gap-3 sm:grid-cols-3">
-                                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                                        <div className="text-xs text-text-muted">
-                                            完成度
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold">
-                                            {result.completionRate}%
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                                        <div className="text-xs text-text-muted">
-                                            已答题
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold">
-                                            {result.answeredQuestions}/
-                                            {result.totalQuestions}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                                        <div className="text-xs text-text-muted">
-                                            用时
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold">
-                                            {formatDuration(result.elapsedSeconds)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                                <div className="rounded-[28px] border border-success/20 bg-success/10 p-5">
-                                    <div className="flex items-center gap-3">
-                                        <Brain className="h-5 w-5 text-success" />
-                                        <h3 className="text-lg font-medium">
-                                            这轮答得好的地方
-                                        </h3>
-                                    </div>
-                                    <div className="mt-4 space-y-3 text-sm leading-7 text-text-main/90">
-                                        {result.strengths.map((item) => (
-                                            <p key={item}>{item}</p>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="rounded-[28px] border border-warning/20 bg-warning/10 p-5">
-                                    <div className="flex items-center gap-3">
-                                        <FileCheck2 className="h-5 w-5 text-warning" />
-                                        <h3 className="text-lg font-medium">
-                                            下一轮优先补什么
-                                        </h3>
-                                    </div>
-                                    <div className="mt-4 space-y-3 text-sm leading-7 text-text-main/90">
-                                        {result.nextActions.map((item) => (
-                                            <p key={item}>{item}</p>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-6">
-                                <h3 className="text-lg font-medium">
-                                    模块得分
-                                </h3>
-                                <div className="mt-4 space-y-3">
-                                    {result.categoryScores.map((item) => (
-                                        <div key={item.category}>
-                                            <div className="mb-1 flex items-center justify-between text-sm">
-                                                <span className="text-text-muted">
-                                                    {item.category}
-                                                </span>
-                                                <span>{item.score}</span>
+                                            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                                                <div>
+                                                    <div className="text-sm text-primary">
+                                                        模块
+                                                    </div>
+                                                    <h2 className="mt-2 text-2xl font-semibold">
+                                                        {group.category}
+                                                    </h2>
+                                                </div>
+                                                <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                                    已答{' '}
+                                                    {countAnswered(
+                                                        group.questions,
+                                                        marathonAnswers,
+                                                    )}
+                                                    /{group.questions.length}
+                                                </div>
                                             </div>
-                                            <div className="h-2 overflow-hidden rounded-full bg-black/30">
-                                                <div
-                                                    className="h-full rounded-full bg-primary"
-                                                    style={{
-                                                        width: `${item.score}%`,
-                                                    }}
-                                                />
+
+                                            <div className="space-y-4">
+                                                {group.questions.map((question) => (
+                                                    <div
+                                                        key={question.id}
+                                                        className="rounded-[28px] border border-white/10 bg-black/20 p-5"
+                                                    >
+                                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                                            <div className="text-sm text-text-muted">
+                                                                题库编号 #
+                                                                {question.index}
+                                                            </div>
+                                                            <div className="text-sm text-text-muted">
+                                                                当前字数：
+                                                                {(
+                                                                    marathonAnswers[
+                                                                        question.id
+                                                                    ] || ''
+                                                                )
+                                                                    .replace(
+                                                                        /\s+/g,
+                                                                        '',
+                                                                    )
+                                                                    .length}
+                                                            </div>
+                                                        </div>
+                                                        <p className="mt-3 text-lg leading-8 text-text-main">
+                                                            {question.prompt}
+                                                        </p>
+                                                        <textarea
+                                                            value={
+                                                                marathonAnswers[
+                                                                    question.id
+                                                                ] || ''
+                                                            }
+                                                            onChange={(event) => {
+                                                                if (
+                                                                    !marathonStartedAt
+                                                                ) {
+                                                                    setMarathonStartedAt(
+                                                                        Date.now(),
+                                                                    )
+                                                                }
+
+                                                                setMarathonAnswers(
+                                                                    (current) => ({
+                                                                        ...current,
+                                                                        [question.id]:
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                    }),
+                                                                )
+                                                            }}
+                                                            placeholder="先写一版能交卷的答案，后面再回头补低分题。"
+                                                            className="mt-4 min-h-[180px] w-full rounded-[24px] border border-white/10 bg-[#0B0C11] p-4 text-sm leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                                        />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
+                                        </section>
                                     ))}
                                 </div>
-                            </div>
 
-                            <div className="mt-6 flex flex-wrap gap-3">
-                                <button
-                                    onClick={resetSession}
-                                    className="rounded-full border border-white/10 px-5 py-2 text-sm text-text-main transition-colors hover:border-white/20"
-                                >
-                                    重新选题
-                                </button>
-                                <button
-                                    onClick={startSession}
-                                    className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-                                >
-                                    <RefreshCw className="h-4 w-4" />
-                                    再来一轮
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {result.questionResults.map((item, index) => (
-                                <div
-                                    key={item.questionId}
-                                    className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                            <div className="text-sm text-primary">
-                                                {item.category}
-                                            </div>
-                                            <h3 className="mt-2 text-lg font-medium leading-7">
-                                                {index + 1}. {item.prompt}
-                                            </h3>
+                                <div className="sticky bottom-6 z-10 rounded-[28px] border border-white/10 bg-[#0B0C11]/90 p-4 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div className="text-sm leading-7 text-text-muted">
+                                            当前已答 {marathonAnsweredCount}/
+                                            {allQuestions.length} 题。
+                                            {marathonAnsweredCount ===
+                                            allQuestions.length
+                                                ? ' 这轮交卷后会解锁抽卡式答题。'
+                                                : ' 只有 100 题全部答完，抽卡模式才会解锁。'}
                                         </div>
-                                        <div
-                                            className={`rounded-full px-4 py-2 text-sm font-medium ${
-                                                item.verdict === 'strong'
-                                                    ? 'bg-success/15 text-success'
-                                                    : item.verdict === 'solid'
-                                                      ? 'bg-primary/15 text-primary'
-                                                      : 'bg-error/15 text-error'
-                                            }`}
+                                        <button
+                                            onClick={submitMarathon}
+                                            disabled={marathonSubmitting}
+                                            className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
-                                            {item.score} 分
+                                            {marathonSubmitting
+                                                ? '正在交卷...'
+                                                : '提交 100 题'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
+                        {marathonResult && (
+                            <ResultPanel
+                                title="100题全刷总分"
+                                result={marathonResult}
+                                onReset={resetMarathon}
+                                onRetry={startMarathon}
+                                retryLabel="再刷 100 题"
+                                extraHint={
+                                    marathonCompleted
+                                        ? '你已经完成了 100 题全刷，抽卡式答题现在已经解锁。'
+                                        : '这轮还没把 100 题全部答完，所以抽卡式答题暂时不会解锁。'
+                                }
+                                extraAction={
+                                    marathonCompleted ? (
+                                        <button
+                                            onClick={() => setActiveMode('cards')}
+                                            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                        >
+                                            <Unlock className="h-4 w-4" />
+                                            去抽卡式答题
+                                        </button>
+                                    ) : undefined
+                                }
+                            />
+                        )}
+                    </>
+                ) : marathonCompleted ? (
+                    <>
+                        {sessionQuestions.length === 0 ? (
+                            <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="flex items-center gap-3 text-primary">
+                                        <Sparkles className="h-5 w-5" />
+                                        <span className="text-sm font-medium">
+                                            抽卡式答题
+                                        </span>
+                                    </div>
+                                    <div className="mt-5 rounded-[24px] border border-success/20 bg-success/10 p-4 text-sm leading-7 text-text-main/90">
+                                        100 题全刷已完成。现在可以随机抽题，专门反复练你最薄弱的模块。
+                                    </div>
+                                    <div className="mt-5 grid gap-4 md:grid-cols-3">
+                                        {[
+                                            {
+                                                label: '快速热身',
+                                                count: 5,
+                                                desc: '10 分钟内跑一轮',
+                                            },
+                                            {
+                                                label: '标准模拟',
+                                                count: 10,
+                                                desc: '更接近正式面试',
+                                            },
+                                            {
+                                                label: '深度拉练',
+                                                count: 15,
+                                                desc: '适合集中补短板',
+                                            },
+                                        ].map((item) => (
+                                            <button
+                                                key={item.count}
+                                                onClick={() =>
+                                                    setQuestionCount(item.count)
+                                                }
+                                                className={`rounded-2xl border p-4 text-left transition-all ${
+                                                    questionCount === item.count
+                                                        ? 'border-primary bg-primary/10 shadow-[0_10px_30px_rgba(77,126,255,0.18)]'
+                                                        : 'border-white/10 bg-black/10 hover:border-white/20 hover:bg-white/[0.03]'
+                                                }`}
+                                            >
+                                                <div className="text-base font-medium">
+                                                    {item.label}
+                                                </div>
+                                                <div className="mt-1 text-3xl font-semibold">
+                                                    {item.count}
+                                                </div>
+                                                <div className="mt-2 text-sm text-text-muted">
+                                                    {item.desc}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <div className="text-sm font-medium">
+                                                选择练习模块
+                                            </div>
+                                            <button
+                                                onClick={() =>
+                                                    setSelectedCategories(
+                                                        categories,
+                                                    )
+                                                }
+                                                className="text-sm text-text-muted transition-colors hover:text-text-main"
+                                            >
+                                                全选
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-3">
+                                            {categories.map((category) => {
+                                                const active =
+                                                    selectedCategories.includes(
+                                                        category,
+                                                    )
+
+                                                return (
+                                                    <button
+                                                        key={category}
+                                                        onClick={() =>
+                                                            toggleCategory(
+                                                                category,
+                                                            )
+                                                        }
+                                                        className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                                            active
+                                                                ? 'border-primary bg-primary/10 text-text-main'
+                                                                : 'border-white/10 bg-black/10 text-text-muted hover:border-white/20 hover:text-text-main'
+                                                        }`}
+                                                    >
+                                                        {category}
+                                                    </button>
+                                                )
+                                            })}
                                         </div>
                                     </div>
-                                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
-                                        {item.answer || '这题未作答'}
-                                    </div>
-                                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                        <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
-                                            <div className="text-sm font-medium">
-                                                做得好的地方
-                                            </div>
-                                            <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
-                                                {item.strengths.map((point) => (
-                                                    <p key={point}>{point}</p>
-                                                ))}
-                                            </div>
+
+                                    <div className="mt-8 flex flex-wrap items-center gap-4">
+                                        <button
+                                            onClick={startSession}
+                                            disabled={
+                                                filteredBank.length === 0 ||
+                                                filteredBank.length <
+                                                    questionCount
+                                            }
+                                            className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
+                                        >
+                                            开始这一轮
+                                        </button>
+                                        <div className="text-sm text-text-muted">
+                                            当前可抽题数：{filteredBank.length} 题
                                         </div>
-                                        <div className="rounded-2xl border border-warning/15 bg-warning/10 p-4">
-                                            <div className="text-sm font-medium">
-                                                还可以补强
-                                            </div>
-                                            <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
-                                                {item.improvements.map((point) => (
-                                                    <p key={point}>{point}</p>
-                                                ))}
-                                            </div>
+                                    </div>
+                                    {filteredBank.length < questionCount && (
+                                        <p className="mt-3 text-sm text-warning">
+                                            当前模块数量不足，请减少题量或多选几个模块。
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <div className="flex items-center gap-3 text-text-main">
+                                            <Gauge className="h-5 w-5 text-success" />
+                                            <h2 className="text-lg font-medium">
+                                                抽卡模式适合干什么
+                                            </h2>
+                                        </div>
+                                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                            <p>把全刷里暴露出来的短板反复练熟。</p>
+                                            <p>控制题量，更适合日常保持手感。</p>
+                                            <p>你可以只抽最弱模块，不用每次都重刷 100 题。</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <div className="flex items-center gap-3 text-text-main">
+                                            <ListChecks className="h-5 w-5 text-primary" />
+                                            <h2 className="text-lg font-medium">
+                                                建议答题方式
+                                            </h2>
+                                        </div>
+                                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                            <p>先讲用户场景和目标，再讲你怎么判断、怎么取舍。</p>
+                                            <p>能给结果就给结果，哪怕是门槛、阈值或上线标准。</p>
+                                            <p>别只讲概念，最好让人听出你真的做过。</p>
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            </section>
+                        ) : (
+                            <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+                                <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                    <div className="flex items-center gap-3 text-sm text-text-muted">
+                                        <Clock3 className="h-4 w-4" />
+                                        已用时 {formatDuration(elapsedSeconds)}
+                                    </div>
+                                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                        <div className="text-sm text-text-muted">
+                                            已完成
+                                        </div>
+                                        <div className="mt-2 text-3xl font-semibold">
+                                            {answeredCount}/{sessionQuestions.length}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-5 space-y-2">
+                                        {sessionQuestions.map((question, index) => {
+                                            const answered =
+                                                answers[question.id]?.trim()
+                                                    .length > 0
+
+                                            return (
+                                                <button
+                                                    key={question.id}
+                                                    onClick={() =>
+                                                        setCurrentIndex(index)
+                                                    }
+                                                    className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                                                        currentIndex === index
+                                                            ? 'border-primary bg-primary/10'
+                                                            : 'border-white/10 bg-black/10 hover:border-white/20'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-sm font-medium">
+                                                            第 {index + 1} 题
+                                                        </span>
+                                                        <span
+                                                            className={`h-2.5 w-2.5 rounded-full ${
+                                                                answered
+                                                                    ? 'bg-success'
+                                                                    : 'bg-border'
+                                                            }`}
+                                                        />
+                                                    </div>
+                                                    <div className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">
+                                                        {question.prompt}
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </aside>
+
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div>
+                                            <div className="text-sm text-primary">
+                                                {currentQuestion.category}
+                                            </div>
+                                            <h2 className="mt-2 text-2xl font-semibold leading-tight">
+                                                第 {currentIndex + 1} 题
+                                            </h2>
+                                        </div>
+                                        <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                            题库编号 #{currentQuestion.index}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <p className="text-lg leading-8 text-text-main">
+                                            {currentQuestion.prompt}
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-5">
+                                        <label
+                                            htmlFor={currentQuestion.id}
+                                            className="mb-3 block text-sm font-medium text-text-muted"
+                                        >
+                                            写下你的回答
+                                        </label>
+                                        <textarea
+                                            id={currentQuestion.id}
+                                            value={answers[currentQuestion.id] || ''}
+                                            onChange={(event) =>
+                                                setAnswers((current) => ({
+                                                    ...current,
+                                                    [currentQuestion.id]:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                            placeholder="建议按“场景/判断/方案/结果”来答。不是每题都要很长，但别只写一句话。"
+                                            className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                        />
+                                    </div>
+
+                                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                                        <div className="text-sm text-text-muted">
+                                            这一题当前字数：
+                                            {(answers[currentQuestion.id] || '')
+                                                .replace(/\s+/g, '').length}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            <button
+                                                onClick={() =>
+                                                    setCurrentIndex((current) =>
+                                                        Math.max(0, current - 1),
+                                                    )
+                                                }
+                                                disabled={currentIndex === 0}
+                                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:text-text-muted"
+                                            >
+                                                上一题
+                                            </button>
+                                            {currentIndex <
+                                            sessionQuestions.length - 1 ? (
+                                                <button
+                                                    onClick={() =>
+                                                        setCurrentIndex(
+                                                            (current) =>
+                                                                Math.min(
+                                                                    sessionQuestions.length -
+                                                                        1,
+                                                                    current + 1,
+                                                                ),
+                                                        )
+                                                    }
+                                                    className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                                >
+                                                    下一题
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={submitSession}
+                                                    disabled={isSubmitting}
+                                                    className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {isSubmitting
+                                                        ? '正在交卷...'
+                                                        : '交卷并评分'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
+                        {result && (
+                            <ResultPanel
+                                title="抽卡模式总分"
+                                result={result}
+                                onReset={resetSession}
+                                onRetry={startSession}
+                                retryLabel="再抽一轮"
+                            />
+                        )}
+                    </>
+                ) : (
+                    <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                        <div className="flex items-center gap-3 text-warning">
+                            <LockKeyhole className="h-5 w-5" />
+                            <span className="text-sm font-medium">
+                                抽卡模式暂未解锁
+                            </span>
+                        </div>
+                        <h2 className="mt-4 text-2xl font-semibold">
+                            先完成一轮 100 题全刷
+                        </h2>
+                        <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
+                            你要先把 100 道题完整交卷一次，系统才会开放抽卡式答题。这样做的目的是先把底图摸清楚，再去针对性补弱项。
+                        </p>
+                        <div className="mt-6">
+                            <button
+                                onClick={() => setActiveMode('marathon')}
+                                className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                            >
+                                去刷 100 题
+                            </button>
                         </div>
                     </section>
                 )}

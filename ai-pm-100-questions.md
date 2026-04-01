@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # AI 产品经理 100 道面试题
 
 说明：这份清单是我根据公开资料里的高频题型整理后，按面试常见模块扩展成的 100 题练习版。它不是逐字摘抄网页，而是把重复出现的考点收拢成一份更适合刷题的版本。
@@ -130,7 +132,7 @@
 97. 当模型能力越来越强，产品护城河会转移到哪里？
 98. 你怎么看 AI 从辅助走向代办甚至代决策？
 99. 如果让你判断一个 AI 赛道是否值得进，你会看哪几个信号？
-100. 你认为 AI 产品经理最容易犯的三个错误是什么？
+100.    你认为 AI 产品经理最容易犯的三个错误是什么？
 
 ## 公开来源
 
@@ -141,3 +143,4 @@
 - https://www.woshipm.com/ai/6286981.html
 - https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/
 - https://www.anthropic.com/engineering/built-multi-agent-research-system
+  ![1775037906063](image/ai-pm-100-questions/1775037906063.png)
