@@ -7,6 +7,10 @@ import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { NextResponse } from 'next/server'
+import {
+    createPdfFriendlyDocx as buildPdfFriendlyDocx,
+    exportResumeDocx,
+} from '@/lib/docx-export'
 
 const execFileAsync = promisify(execFile)
 
@@ -14,14 +18,6 @@ type Replacement = {
     name: string
     original: string
     updated: string
-}
-
-function getPythonCommand() {
-    const venvPython = path.join(process.cwd(), '.venv-docx', 'bin', 'python')
-    return fs
-        .access(venvPython)
-        .then(() => venvPython)
-        .catch(() => 'python3')
 }
 
 async function getSofficeCommand() {
@@ -57,21 +53,10 @@ async function getPagesCommand() {
 }
 
 async function createPdfFriendlyDocx(inputPath: string, outputPath: string) {
-    const pythonCommand = await getPythonCommand()
-    const scriptPath = path.join(
-        process.cwd(),
-        'scripts',
-        'prepare_pdf_docx.py',
-    )
-
-    await execFileAsync(pythonCommand, [
-        scriptPath,
-        '--input',
+    await buildPdfFriendlyDocx({
         inputPath,
-        '--output',
         outputPath,
-    ])
-
+    })
     await fs.access(outputPath)
     return outputPath
 }
@@ -160,11 +145,9 @@ async function convertDocxToPdf(docxPath: string, outputDir: string) {
 }
 
 export async function GET() {
-    const pythonCommand = await getPythonCommand()
-    const canExportDocx = !!pythonCommand
     const canExportPdf = !!((await getPagesCommand()) || (await getSofficeCommand()))
 
-    return NextResponse.json({ canExportDocx, canExportPdf })
+    return NextResponse.json({ canExportDocx: true, canExportPdf })
 }
 
 export async function POST(request: Request) {
@@ -195,31 +178,14 @@ export async function POST(request: Request) {
 
         const inputPath = path.join(tempRoot, 'input.docx')
         const outputDocxPath = path.join(tempRoot, 'resume-updated.docx')
-        const replacementsPath = path.join(tempRoot, 'replacements.json')
 
         await fs.writeFile(inputPath, Buffer.from(await file.arrayBuffer()))
-        await fs.writeFile(
-            replacementsPath,
-            JSON.stringify(replacements, null, 2),
-            'utf8',
-        )
 
-        const pythonCommand = await getPythonCommand()
-        const scriptPath = path.join(
-            process.cwd(),
-            'scripts',
-            'export_resume_docx.py',
-        )
-
-        await execFileAsync(pythonCommand, [
-            scriptPath,
-            '--input',
+        await exportResumeDocx({
             inputPath,
-            '--output',
-            outputDocxPath,
-            '--replacements',
-            replacementsPath,
-        ])
+            outputPath: outputDocxPath,
+            replacements,
+        })
 
         if (target === 'pdf') {
             const pdfPath = await convertDocxToPdf(outputDocxPath, tempRoot)

@@ -1,6 +1,7 @@
 /** @format */
 
 import React, { useState, useRef } from 'react'
+import Link from 'next/link'
 import { UploadCloud, CheckCircle } from 'lucide-react'
 
 export function UploadView({
@@ -48,7 +49,10 @@ export function UploadView({
                 return
             }
 
-            await onAnalyze(result.text, fileName.endsWith('.docx') ? file : null)
+            await onAnalyze(
+                result.text,
+                fileName.endsWith('.docx') ? file : null,
+            )
         } catch (e) {
             console.error(e)
             alert('解析失败，请重试或直接粘贴文本')
@@ -85,6 +89,14 @@ export function UploadView({
                 <p className="text-text-muted text-lg mb-8">
                     专为AI PM打造，深度优化模型评估、数据策略与算法协作经历
                 </p>
+                <div className="mb-8 flex justify-center">
+                    <Link
+                        href="/interview"
+                        className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
+                    >
+                        去刷 AI PM 面试题
+                    </Link>
+                </div>
                 <div className="flex justify-center gap-8 text-sm text-text-muted">
                     <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-success" />{' '}
