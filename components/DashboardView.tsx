@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ResumeData, Project } from '../lib/types';
+import { ResumeData, Project, TargetRoleProfile } from '../lib/types';
 import { CircularProgress } from './CircularProgress';
 import { optimizeProject, refineProjectStream } from '../lib/gemini';
 import { AI_PM_REQUIREMENTS } from '../lib/ai-pm-requirements';
@@ -7,10 +7,12 @@ import { CheckCircle, AlertTriangle, ChevronRight, Lock, Copy, Send, Loader2 } f
 
 export function DashboardView({
   data,
+  targetRoleProfile,
   onUpdateProject,
   onFinish
 }: {
   data: ResumeData;
+  targetRoleProfile: TargetRoleProfile | null;
   onUpdateProject: (projectId: string, updates: Partial<Project>) => void;
   onFinish: () => void;
 }) {
@@ -26,7 +28,7 @@ export function DashboardView({
     const generateVersions = async (project: Project) => {
       setIsGenerating(true);
       try {
-        const versions = await optimizeProject(project);
+        const versions = await optimizeProject(project, targetRoleProfile);
         onUpdateProject(project.id, { versions });
       } catch (e) {
         console.error(e);
@@ -39,7 +41,7 @@ export function DashboardView({
     if (activeProject && !activeProject.versions && !isGenerating) {
       generateVersions(activeProject);
     }
-  }, [activeProject, isGenerating, onUpdateProject]);
+  }, [activeProject, isGenerating, onUpdateProject, targetRoleProfile]);
 
   const handleChat = async () => {
     if (!chatInput.trim() || !activeProject || !activeProject.versions) return;
@@ -57,7 +59,7 @@ export function DashboardView({
 
     try {
       let aiText = '';
-      const stream = refineProjectStream(currentText, userReq);
+      const stream = refineProjectStream(currentText, userReq, targetRoleProfile);
       for await (const chunk of stream) {
         aiText += chunk;
         onUpdateProject(activeProject.id, {
@@ -77,6 +79,10 @@ export function DashboardView({
   const currentVersionText = activeProject?.versions
     ? (activeTab === 'custom' ? activeProject.customVersion : activeProject.versions[activeTab as keyof typeof activeProject.versions])
     : '';
+  const targetRoleLabel = targetRoleProfile?.company
+    ? `${targetRoleProfile.title} · ${targetRoleProfile.company}`
+    : targetRoleProfile?.title || '';
+  const hasTargetJobDescription = Boolean(targetRoleProfile?.jobDescription?.trim());
 
   return (
     <div className="flex h-screen bg-bg-main overflow-hidden">
@@ -140,6 +146,19 @@ export function DashboardView({
       {activeProjectId === 'overall' ? (
         <div className="flex-1 p-8 overflow-y-auto bg-bg-main">
           <h2 className="text-2xl font-bold text-text-main mb-6">整体简历诊断报告</h2>
+          {targetRoleLabel && (
+            <div className="bg-primary/10 rounded-xl p-5 border border-primary/20 mb-6">
+              <h4 className="text-lg font-medium text-text-main mb-2">当前按目标岗位定向诊断</h4>
+              <p className="text-sm text-text-main leading-relaxed">
+                目标岗位：{targetRoleLabel}
+              </p>
+              <p className="text-xs text-text-muted leading-relaxed mt-2">
+                {hasTargetJobDescription
+                  ? '已参考你粘贴的岗位描述，后面的问题诊断和项目改写会优先贴这个岗位的要求。'
+                  : '如果你后面补充岗位描述，定向程度还可以再往上提一档。'}
+              </p>
+            </div>
+          )}
           <div className="bg-bg-card rounded-xl p-6 border border-border mb-6">
             <h4 className="text-lg font-medium text-error mb-4 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" /> 核心问题诊断 (整体)
@@ -192,11 +211,18 @@ export function DashboardView({
             </div>
             <div className="bg-bg-main rounded-xl p-4 border border-border mt-4">
               <h4 className="text-sm font-medium text-text-main mb-2">
-                当前项目会按这20条AI产品经理岗位要求来改写
+                当前项目会按目标岗位来改写
               </h4>
               <p className="text-xs text-text-muted leading-relaxed">
-                AI 会优先补这个项目在“场景定义、AI方案、数据评测、业务结果、跨团队推进、落地闭环”等方面最缺的内容，不再只是做普通润色。
+                {targetRoleLabel
+                  ? `这次会优先往“${targetRoleLabel}”靠，重点补这个岗位更在意的场景定义、AI方案、数据评测、业务结果和跨团队推进。`
+                  : 'AI 会优先补这个项目在“场景定义、AI方案、数据评测、业务结果、跨团队推进、落地闭环”等方面最缺的内容，不再只是做普通润色。'}
               </p>
+              {hasTargetJobDescription && (
+                <p className="text-xs text-text-muted leading-relaxed mt-2">
+                  你提供的岗位描述也会一起参考，关键词和职责要求会尽量贴进去。
+                </p>
+              )}
             </div>
           </div>
 

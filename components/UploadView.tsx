@@ -3,18 +3,46 @@
 import React, { useState, useRef } from 'react'
 import Link from 'next/link'
 import { UploadCloud, CheckCircle } from 'lucide-react'
+import { TargetRoleProfile } from '@/lib/types'
 
 export function UploadView({
     onAnalyze,
 }: {
-    onAnalyze: (text: string, sourceFile?: File | null) => Promise<boolean>
+    onAnalyze: (
+        text: string,
+        targetRole: TargetRoleProfile,
+        sourceFile?: File | null,
+    ) => Promise<boolean>
 }) {
     const [isDragging, setIsDragging] = useState(false)
     const [text, setText] = useState('')
+    const [targetTitle, setTargetTitle] = useState('')
+    const [targetCompany, setTargetCompany] = useState('')
+    const [targetJobDescription, setTargetJobDescription] = useState('')
     const [loading, setLoading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    const buildTargetRoleProfile = (): TargetRoleProfile | null => {
+        const profile = {
+            title: targetTitle.trim(),
+            company: targetCompany.trim(),
+            jobDescription: targetJobDescription.trim(),
+        }
+
+        if (!profile.title) {
+            alert('请先填写目标岗位，再开始分析')
+            return null
+        }
+
+        return profile
+    }
+
     const handleFile = async (file: File) => {
+        const targetRoleProfile = buildTargetRoleProfile()
+        if (!targetRoleProfile) {
+            return
+        }
+
         setLoading(true)
         try {
             const fileName = file.name.toLowerCase()
@@ -51,6 +79,7 @@ export function UploadView({
 
             await onAnalyze(
                 result.text,
+                targetRoleProfile,
                 fileName.endsWith('.docx') ? file : null,
             )
         } catch (e) {
@@ -64,9 +93,14 @@ export function UploadView({
     const handleTextAnalyze = async () => {
         if (!text.trim()) return
 
+        const targetRoleProfile = buildTargetRoleProfile()
+        if (!targetRoleProfile) {
+            return
+        }
+
         setLoading(true)
         try {
-            await onAnalyze(text, null)
+            await onAnalyze(text, targetRoleProfile, null)
         } finally {
             setLoading(false)
         }
@@ -110,6 +144,70 @@ export function UploadView({
                         <CheckCircle className="w-4 h-4 text-success" /> AI
                         PM关键词注入
                     </div>
+                </div>
+            </div>
+
+            <div className="bg-bg-card border border-border rounded-2xl p-6 mb-8">
+                <div className="mb-4">
+                    <h2 className="text-xl font-bold text-text-main mb-2">
+                        目标岗位
+                    </h2>
+                    <p className="text-sm text-text-muted leading-relaxed">
+                        先告诉我你要投什么岗位。后面的诊断和改写会优先贴着这个岗位来做，不再只给你通用版本。
+                    </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label
+                            htmlFor="target-title"
+                            className="block text-sm font-medium text-text-main mb-2"
+                        >
+                            岗位名称
+                        </label>
+                        <input
+                            id="target-title"
+                            value={targetTitle}
+                            onChange={(e) => setTargetTitle(e.target.value)}
+                            placeholder="例如：AI 产品经理 / AI PM"
+                            className="w-full bg-bg-main border border-border rounded-xl px-4 py-3 text-text-main focus:outline-none focus:border-primary"
+                        />
+                        <p className="mt-2 text-xs text-text-muted">
+                            这是必填项，系统会按这个岗位来判断你的简历缺什么。
+                        </p>
+                    </div>
+                    <div>
+                        <label
+                            htmlFor="target-company"
+                            className="block text-sm font-medium text-text-main mb-2"
+                        >
+                            目标公司
+                        </label>
+                        <input
+                            id="target-company"
+                            value={targetCompany}
+                            onChange={(e) => setTargetCompany(e.target.value)}
+                            placeholder="例如：字节 / 阿里 / 某家创业公司"
+                            className="w-full bg-bg-main border border-border rounded-xl px-4 py-3 text-text-main focus:outline-none focus:border-primary"
+                        />
+                        <p className="mt-2 text-xs text-text-muted">
+                            不填也能分析；填了之后，改写会更贴近具体公司口味。
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <label
+                        htmlFor="target-job-description"
+                        className="block text-sm font-medium text-text-main mb-2"
+                    >
+                        岗位描述
+                    </label>
+                    <textarea
+                        id="target-job-description"
+                        value={targetJobDescription}
+                        onChange={(e) => setTargetJobDescription(e.target.value)}
+                        placeholder="把岗位描述贴进来，系统会优先参考里面的关键词、职责和要求。"
+                        className="w-full h-32 bg-bg-main border border-border rounded-xl p-4 text-text-main focus:outline-none focus:border-primary resize-none"
+                    ></textarea>
                 </div>
             </div>
 

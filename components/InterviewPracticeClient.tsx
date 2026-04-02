@@ -21,8 +21,13 @@ import {
     InterviewEvaluation,
     InterviewQuestion,
 } from '@/lib/interview-types'
+import {
+    generateMockInterviewQuestion,
+    generateResumeInterviewQuestions,
+} from '@/lib/gemini'
+import { ResumeInterviewProfile, RESUME_INTERVIEW_PROFILE_STORAGE_KEY } from '@/lib/interview-profile'
 
-type PracticeMode = 'marathon' | 'cards'
+type PracticeMode = 'marathon' | 'mock' | 'cards' | 'resume'
 
 const MARATHON_COMPLETED_STORAGE_KEY = 'resumeai-pm-marathon-completed'
 
@@ -253,6 +258,7 @@ export function InterviewPracticeClient({
     )
 
     const [activeMode, setActiveMode] = useState<PracticeMode>('marathon')
+    const [resumeProfile, setResumeProfile] = useState<ResumeInterviewProfile | null>(null)
     const [marathonCompleted, setMarathonCompleted] = useState(false)
 
     const [marathonAnswers, setMarathonAnswers] = useState<Record<string, string>>(
@@ -266,15 +272,33 @@ export function InterviewPracticeClient({
 
     const [selectedCategories, setSelectedCategories] = useState<string[]>(categories)
     const [questionCount, setQuestionCount] = useState(10)
+    const [mockQuestionCount, setMockQuestionCount] = useState(5)
+    const [resumeQuestionCount, setResumeQuestionCount] = useState(8)
     const [sessionQuestions, setSessionQuestions] = useState<InterviewQuestion[]>([])
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [currentIndex, setCurrentIndex] = useState(0)
     const [startedAt, setStartedAt] = useState<number | null>(null)
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isGeneratingMockQuestion, setIsGeneratingMockQuestion] = useState(false)
+    const [isGeneratingResumeSession, setIsGeneratingResumeSession] = useState(false)
     const [result, setResult] = useState<InterviewEvaluation | null>(null)
 
     useEffect(() => {
+        const profileRaw = window.localStorage.getItem(
+            RESUME_INTERVIEW_PROFILE_STORAGE_KEY,
+        )
+        if (profileRaw) {
+            try {
+                const profile = JSON.parse(profileRaw) as ResumeInterviewProfile
+                if (profile?.selectedProjects?.length > 0) {
+                    setResumeProfile(profile)
+                }
+            } catch (error) {
+                console.error('Failed to load interview profile:', error)
+            }
+        }
+
         const storedValue = window.localStorage.getItem(
             MARATHON_COMPLETED_STORAGE_KEY,
         )
@@ -341,6 +365,7 @@ export function InterviewPracticeClient({
         totalElapsedSeconds: number
     }) => {
         const payload = {
+            questions,
             questionIds: questions.map((item) => item.id),
             elapsedSeconds: totalElapsedSeconds,
             answers: questions.map(
@@ -425,18 +450,97 @@ export function InterviewPracticeClient({
         }
     }
 
-    const startSession = () => {
-        const bank = shuffle(filteredBank).slice(
-            0,
-            Math.min(questionCount, filteredBank.length),
-        )
-
+    const startQuestionSession = (
+        bank: InterviewQuestion[],
+        _source: 'cards' | 'resume',
+    ) => {
         setSessionQuestions(bank)
         setAnswers({})
         setCurrentIndex(0)
         setResult(null)
         setElapsedSeconds(0)
         setStartedAt(Date.now())
+    }
+
+    const startSession = () => {
+        const bank = shuffle(filteredBank).slice(
+            0,
+            Math.min(questionCount, filteredBank.length),
+        )
+
+        startQuestionSession(bank, 'cards')
+    }
+
+    const startResumeSession = async () => {
+        if (!resumeProfile) {
+            return
+        }
+
+        setIsGeneratingResumeSession(true)
+
+        try {
+            const questions = await generateResumeInterviewQuestions({
+                profile: resumeProfile,
+                count: resumeQuestionCount,
+            })
+            startQuestionSession(questions, 'resume')
+        } catch (error) {
+            console.error(error)
+            alert('定向题生成失败，请稍后重试')
+        } finally {
+            setIsGeneratingResumeSession(false)
+        }
+    }
+
+    const startMockInterview = async () => {
+        setIsGeneratingMockQuestion(true)
+
+        try {
+            const firstQuestion = await generateMockInterviewQuestion({
+                profile: resumeProfile,
+                history: [],
+                round: 1,
+            })
+            startQuestionSession([firstQuestion], 'resume')
+        } catch (error) {
+            console.error(error)
+            alert('模拟面试开启失败，请稍后重试')
+        } finally {
+            setIsGeneratingMockQuestion(false)
+        }
+    }
+
+    const advanceMockInterview = async () => {
+        const answer = currentQuestion ? answers[currentQuestion.id]?.trim() : ''
+
+        if (!currentQuestion || !answer) {
+            alert('请先回答当前问题，再继续追问。')
+            return
+        }
+
+        setIsGeneratingMockQuestion(true)
+
+        try {
+            const nextQuestion = await generateMockInterviewQuestion({
+                profile: resumeProfile,
+                round: sessionQuestions.length + 1,
+                history: sessionQuestions
+                    .map((question) => ({
+                        question: question.prompt,
+                        category: question.category,
+                        answer: answers[question.id] || '',
+                    }))
+                    .filter((item) => item.answer.trim()),
+            })
+
+            setSessionQuestions((current) => [...current, nextQuestion])
+            setCurrentIndex(sessionQuestions.length)
+        } catch (error) {
+            console.error(error)
+            alert('下一道追问生成失败，请稍后重试')
+        } finally {
+            setIsGeneratingMockQuestion(false)
+        }
     }
 
     const resetSession = () => {
@@ -511,6 +615,37 @@ export function InterviewPracticeClient({
                     >
                         <LibraryBig className="h-4 w-4" />
                         100题全刷
+                    </button>
+                    <button
+                        onClick={() => setActiveMode('mock')}
+                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
+                            activeMode === 'mock'
+                                ? 'border-primary bg-primary/10 text-text-main'
+                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
+                        }`}
+                    >
+                        <Brain className="h-4 w-4" />
+                        模拟面试
+                    </button>
+                    <button
+                        onClick={() => resumeProfile && setActiveMode('resume')}
+                        disabled={!resumeProfile}
+                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
+                            activeMode === 'resume'
+                                ? 'border-primary bg-primary/10 text-text-main'
+                                : 'border-white/10 bg-white/[0.04] text-text-muted'
+                        } ${
+                            resumeProfile
+                                ? 'hover:border-white/20 hover:text-text-main'
+                                : 'cursor-not-allowed opacity-60'
+                        }`}
+                    >
+                        {resumeProfile ? (
+                            <FileCheck2 className="h-4 w-4" />
+                        ) : (
+                            <LockKeyhole className="h-4 w-4" />
+                        )}
+                        简历定向题
                     </button>
                     <button
                         onClick={() => marathonCompleted && setActiveMode('cards')}
@@ -825,6 +960,549 @@ export function InterviewPracticeClient({
                             />
                         )}
                     </>
+                ) : activeMode === 'mock' ? (
+                    <>
+                        {sessionQuestions.length === 0 ? (
+                            <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="flex items-center gap-3 text-primary">
+                                        <Brain className="h-5 w-5" />
+                                        <span className="text-sm font-medium">
+                                            模拟面试
+                                        </span>
+                                    </div>
+                                    <div className="mt-5 rounded-[24px] border border-success/20 bg-success/10 p-4 text-sm leading-7 text-text-main/90">
+                                        这里不再是题库刷题，而是一轮会连续追问的文字模拟面试。第一题从自我介绍或岗位匹配开始，后面会根据你的回答继续深挖。
+                                    </div>
+
+                                    <div className="mt-5 space-y-4">
+                                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                            <div className="text-sm text-text-muted">
+                                                这轮会参考什么
+                                            </div>
+                                            <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
+                                                <p>{resumeProfile ? '会参考你最近一次简历诊断、目标岗位和项目经历。' : '如果你还没做简历诊断，也能先按通用 AI 产品经理面试来模拟。'}</p>
+                                                <p>每一轮会优先追问项目、指标、推进、取舍和风险。</p>
+                                            </div>
+                                        </div>
+                                        {resumeProfile && (
+                                            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                                <div className="text-sm text-text-muted">当前目标岗位</div>
+                                                <div className="mt-2 text-lg font-semibold">
+                                                    {resumeProfile.targetRoleProfile?.company
+                                                        ? `${resumeProfile.targetRoleProfile.title} · ${resumeProfile.targetRoleProfile.company}`
+                                                        : resumeProfile.targetRoleProfile?.title || 'AI 产品经理'}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-6">
+                                        <div className="mb-3 text-sm font-medium">
+                                            追问轮数
+                                        </div>
+                                        <div className="flex flex-wrap gap-3">
+                                            {[4, 5, 6].map((count) => (
+                                                <button
+                                                    key={count}
+                                                    onClick={() => setMockQuestionCount(count)}
+                                                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                                        mockQuestionCount === count
+                                                            ? 'border-primary bg-primary/10 text-text-main'
+                                                            : 'border-white/10 bg-black/10 text-text-muted hover:border-white/20 hover:text-text-main'
+                                                    }`}
+                                                >
+                                                    {count} 轮
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8 flex flex-wrap items-center gap-4">
+                                        <button
+                                            onClick={startMockInterview}
+                                            disabled={isGeneratingMockQuestion}
+                                            className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
+                                        >
+                                            {isGeneratingMockQuestion
+                                                ? '正在生成第一题...'
+                                                : '开始模拟面试'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <div className="flex items-center gap-3 text-text-main">
+                                            <Gauge className="h-5 w-5 text-success" />
+                                            <h2 className="text-lg font-medium">
+                                                这一轮会更像真实面试
+                                            </h2>
+                                        </div>
+                                        <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                            <p>不是一次性把题给你，而是你答完一轮再继续追问。</p>
+                                            <p>第一题通常会从自我介绍开始，后面逐步深挖项目和指标。</p>
+                                            <p>结束后还是会给你总分和逐题反馈，方便你回头补强。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        ) : (
+                            <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+                                <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                    <div className="flex items-center gap-3 text-sm text-text-muted">
+                                        <Clock3 className="h-4 w-4" />
+                                        已用时 {formatDuration(elapsedSeconds)}
+                                    </div>
+                                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                        <div className="text-sm text-text-muted">
+                                            当前轮次
+                                        </div>
+                                        <div className="mt-2 text-3xl font-semibold">
+                                            {sessionQuestions.length}/{mockQuestionCount}
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-muted">
+                                        面试官会根据你刚才的回答继续追问。越往后，问题通常会越具体。
+                                    </div>
+
+                                    <div className="mt-5 space-y-2">
+                                        {sessionQuestions.map((question, index) => {
+                                            const answered =
+                                                answers[question.id]?.trim()
+                                                    .length > 0
+
+                                            return (
+                                                <button
+                                                    key={question.id}
+                                                    onClick={() =>
+                                                        setCurrentIndex(index)
+                                                    }
+                                                    className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                                                        currentIndex === index
+                                                            ? 'border-primary bg-primary/10'
+                                                            : 'border-white/10 bg-black/10 hover:border-white/20'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-sm font-medium">
+                                                            第 {index + 1} 轮
+                                                        </span>
+                                                        <span
+                                                            className={`h-2.5 w-2.5 rounded-full ${
+                                                                answered
+                                                                    ? 'bg-success'
+                                                                    : 'bg-border'
+                                                            }`}
+                                                        />
+                                                    </div>
+                                                    <div className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">
+                                                        {question.prompt}
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </aside>
+
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div>
+                                            <div className="text-sm text-primary">
+                                                {currentQuestion.category}
+                                            </div>
+                                            <h2 className="mt-2 text-2xl font-semibold leading-tight">
+                                                第 {currentIndex + 1} 轮
+                                            </h2>
+                                        </div>
+                                        <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                            模拟面试
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                        <p className="text-lg leading-8 text-text-main">
+                                            {currentQuestion.prompt}
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-5">
+                                        <label
+                                            htmlFor={currentQuestion.id}
+                                            className="mb-3 block text-sm font-medium text-text-muted"
+                                        >
+                                            你的回答
+                                        </label>
+                                        <textarea
+                                            id={currentQuestion.id}
+                                            value={answers[currentQuestion.id] || ''}
+                                            onChange={(event) =>
+                                                setAnswers((current) => ({
+                                                    ...current,
+                                                    [currentQuestion.id]:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                            placeholder="把它当作正式面试来答。先讲结论，再展开背景、动作、结果和取舍。"
+                                            className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                        />
+                                    </div>
+
+                                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                                        <div className="text-sm text-text-muted">
+                                            当前字数：
+                                            {(answers[currentQuestion.id] || '')
+                                                .replace(/\s+/g, '').length}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            <button
+                                                onClick={() =>
+                                                    setCurrentIndex((current) =>
+                                                        Math.max(0, current - 1),
+                                                    )
+                                                }
+                                                disabled={currentIndex === 0}
+                                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:text-text-muted"
+                                            >
+                                                上一轮
+                                            </button>
+                                            {currentIndex <
+                                            sessionQuestions.length - 1 ? (
+                                                <button
+                                                    onClick={() =>
+                                                        setCurrentIndex(
+                                                            (current) =>
+                                                                Math.min(
+                                                                    sessionQuestions.length -
+                                                                        1,
+                                                                    current + 1,
+                                                                ),
+                                                        )
+                                                    }
+                                                    className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                                >
+                                                    看下一轮
+                                                </button>
+                                            ) : sessionQuestions.length <
+                                              mockQuestionCount ? (
+                                                <button
+                                                    onClick={advanceMockInterview}
+                                                    disabled={
+                                                        isGeneratingMockQuestion ||
+                                                        !answers[currentQuestion.id]?.trim()
+                                                    }
+                                                    className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
+                                                >
+                                                    {isGeneratingMockQuestion
+                                                        ? '正在生成追问...'
+                                                        : '继续追问'}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={submitSession}
+                                                    disabled={isSubmitting}
+                                                    className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {isSubmitting
+                                                        ? '正在交卷...'
+                                                        : '结束并评分'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
+                        {result && (
+                            <ResultPanel
+                                title="模拟面试总分"
+                                result={result}
+                                onReset={resetSession}
+                                onRetry={startMockInterview}
+                                retryLabel="再来一轮模拟面试"
+                                extraHint="这一轮是连续追问式模拟面试，不是公共题库刷题。下一轮会重新从开场自我介绍开始。"
+                            />
+                        )}
+                    </>
+                ) : activeMode === 'resume' ? (
+                    resumeProfile ? (
+                        <>
+                            {sessionQuestions.length === 0 ? (
+                                <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                        <div className="flex items-center gap-3 text-primary">
+                                            <FileCheck2 className="h-5 w-5" />
+                                            <span className="text-sm font-medium">
+                                                简历定向题
+                                            </span>
+                                        </div>
+                                        <div className="mt-5 rounded-[24px] border border-success/20 bg-success/10 p-4 text-sm leading-7 text-text-main/90">
+                                            已读取你最近一次简历诊断。这一轮会按你的目标岗位、项目经历和当前短板来出题，更接近真实面试深挖。
+                                        </div>
+
+                                        <div className="mt-5 space-y-4">
+                                            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                                <div className="text-sm text-text-muted">当前目标岗位</div>
+                                                <div className="mt-2 text-lg font-semibold">
+                                                    {resumeProfile.targetRoleProfile?.company
+                                                        ? `${resumeProfile.targetRoleProfile.title} · ${resumeProfile.targetRoleProfile.company}`
+                                                        : resumeProfile.targetRoleProfile?.title || 'AI 产品经理'}
+                                                </div>
+                                            </div>
+                                            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                                <div className="text-sm text-text-muted">会优先追问的点</div>
+                                                <div className="mt-3 space-y-2 text-sm leading-7 text-text-main/90">
+                                                    {(resumeProfile.overallIssues.length > 0
+                                                        ? resumeProfile.overallIssues
+                                                        : ['项目结果表达不够具体', '岗位匹配说服力还可以更强']
+                                                    ).slice(0, 3).map((item) => (
+                                                        <p key={item}>{item}</p>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <div className="mb-3 text-sm font-medium">
+                                                本轮题量
+                                            </div>
+                                            <div className="flex flex-wrap gap-3">
+                                                {[5, 8, 10].map((count) => (
+                                                    <button
+                                                        key={count}
+                                                        onClick={() => setResumeQuestionCount(count)}
+                                                        className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                                            resumeQuestionCount === count
+                                                                ? 'border-primary bg-primary/10 text-text-main'
+                                                                : 'border-white/10 bg-black/10 text-text-muted hover:border-white/20 hover:text-text-main'
+                                                        }`}
+                                                    >
+                                                        {count} 题
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-8 flex flex-wrap items-center gap-4">
+                                            <button
+                                                onClick={startResumeSession}
+                                                disabled={isGeneratingResumeSession}
+                                                className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
+                                            >
+                                                {isGeneratingResumeSession
+                                                    ? '正在生成定向题...'
+                                                    : '开始这一轮定向题'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                            <div className="flex items-center gap-3 text-text-main">
+                                                <Gauge className="h-5 w-5 text-success" />
+                                                <h2 className="text-lg font-medium">
+                                                    这轮和公共题库有什么不同
+                                                </h2>
+                                            </div>
+                                            <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
+                                                <p>会优先深挖你的项目经历，不再只是泛泛问概念。</p>
+                                                <p>会贴着你要投的岗位，追问匹配度、结果和取舍。</p>
+                                                <p>会针对简历短板补刀，更接近真实面试压力点。</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            ) : (
+                                <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+                                    <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                        <div className="flex items-center gap-3 text-sm text-text-muted">
+                                            <Clock3 className="h-4 w-4" />
+                                            已用时 {formatDuration(elapsedSeconds)}
+                                        </div>
+                                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                            <div className="text-sm text-text-muted">
+                                                已完成
+                                            </div>
+                                            <div className="mt-2 text-3xl font-semibold">
+                                                {answeredCount}/{sessionQuestions.length}
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-muted">
+                                            这轮题是根据你最近一次简历和目标岗位生成的。
+                                        </div>
+
+                                        <div className="mt-5 space-y-2">
+                                            {sessionQuestions.map((question, index) => {
+                                                const answered =
+                                                    answers[question.id]?.trim()
+                                                        .length > 0
+
+                                                return (
+                                                    <button
+                                                        key={question.id}
+                                                        onClick={() =>
+                                                            setCurrentIndex(index)
+                                                        }
+                                                        className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                                                            currentIndex === index
+                                                                ? 'border-primary bg-primary/10'
+                                                                : 'border-white/10 bg-black/10 hover:border-white/20'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <span className="text-sm font-medium">
+                                                                第 {index + 1} 题
+                                                            </span>
+                                                            <span
+                                                                className={`h-2.5 w-2.5 rounded-full ${
+                                                                    answered
+                                                                        ? 'bg-success'
+                                                                        : 'bg-border'
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                        <div className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">
+                                                            {question.prompt}
+                                                        </div>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </aside>
+
+                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                        <div className="flex flex-wrap items-center justify-between gap-4">
+                                            <div>
+                                                <div className="text-sm text-primary">
+                                                    {currentQuestion.category}
+                                                </div>
+                                                <h2 className="mt-2 text-2xl font-semibold leading-tight">
+                                                    第 {currentIndex + 1} 题
+                                                </h2>
+                                            </div>
+                                            <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                                定向题 #{currentQuestion.index}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
+                                            <p className="text-lg leading-8 text-text-main">
+                                                {currentQuestion.prompt}
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-5">
+                                            <label
+                                                htmlFor={currentQuestion.id}
+                                                className="mb-3 block text-sm font-medium text-text-muted"
+                                            >
+                                                写下你的回答
+                                            </label>
+                                            <textarea
+                                                id={currentQuestion.id}
+                                                value={answers[currentQuestion.id] || ''}
+                                                onChange={(event) =>
+                                                    setAnswers((current) => ({
+                                                        ...current,
+                                                        [currentQuestion.id]:
+                                                            event.target.value,
+                                                    }))
+                                                }
+                                                placeholder="这轮建议你更像正式面试那样答，尽量把场景、判断、动作、结果讲完整。"
+                                                className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                            />
+                                        </div>
+
+                                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                                            <div className="text-sm text-text-muted">
+                                                这一题当前字数：
+                                                {(answers[currentQuestion.id] || '')
+                                                    .replace(/\s+/g, '').length}
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-3">
+                                                <button
+                                                    onClick={() =>
+                                                        setCurrentIndex((current) =>
+                                                            Math.max(0, current - 1),
+                                                        )
+                                                    }
+                                                    disabled={currentIndex === 0}
+                                                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:text-text-muted"
+                                                >
+                                                    上一题
+                                                </button>
+                                                {currentIndex <
+                                                sessionQuestions.length - 1 ? (
+                                                    <button
+                                                        onClick={() =>
+                                                            setCurrentIndex(
+                                                                (current) =>
+                                                                    Math.min(
+                                                                        sessionQuestions.length -
+                                                                            1,
+                                                                        current + 1,
+                                                                    ),
+                                                            )
+                                                        }
+                                                        className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                                    >
+                                                        下一题
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={submitSession}
+                                                        disabled={isSubmitting}
+                                                        className="rounded-full bg-success px-5 py-2 text-sm font-medium text-[#08110C] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        {isSubmitting
+                                                            ? '正在交卷...'
+                                                            : '交卷并评分'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            )}
+
+                            {result && (
+                                <ResultPanel
+                                    title="简历定向题总分"
+                                    result={result}
+                                    onReset={resetSession}
+                                    onRetry={startResumeSession}
+                                    retryLabel="再来一轮定向题"
+                                    extraHint="这轮题目是根据你最近一次简历诊断生成的。如果你回去更新了简历，再来刷这一轮会更准。"
+                                />
+                            )}
+                        </>
+                    ) : (
+                        <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                            <div className="flex items-center gap-3 text-warning">
+                                <LockKeyhole className="h-5 w-5" />
+                                <span className="text-sm font-medium">
+                                    还没有读到你的简历结果
+                                </span>
+                            </div>
+                            <h2 className="mt-4 text-2xl font-semibold">
+                                先回首页跑一遍简历诊断
+                            </h2>
+                            <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
+                                完成简历分析后，系统会自动把目标岗位、项目经历和薄弱点带到这里，再给你出一轮定向题。
+                            </p>
+                            <div className="mt-6">
+                                <Link
+                                    href="/"
+                                    className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                                >
+                                    去做简历诊断
+                                </Link>
+                            </div>
+                        </section>
+                    )
                 ) : marathonCompleted ? (
                     <>
                         {sessionQuestions.length === 0 ? (

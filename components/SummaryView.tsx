@@ -1,15 +1,22 @@
 import React from 'react';
-import { ResumeData } from '../lib/types';
-import { Copy, ArrowLeft, Download, Loader2, FileText, CheckSquare, Square } from 'lucide-react';
+import Link from 'next/link';
+import { ResumeData, TargetRoleProfile } from '../lib/types';
+import { Copy, ArrowLeft, Download, Loader2, FileText, CheckSquare, Square, Sparkles } from 'lucide-react';
+import { generateFullResumeDraft } from '../lib/gemini';
+import { RESUME_INTERVIEW_PROFILE_STORAGE_KEY } from '../lib/interview-profile';
 
 export function SummaryView({
   data,
   onBack,
   sourceDocxFile,
+  originalResumeText,
+  targetRoleProfile,
 }: {
   data: ResumeData,
   onBack: () => void,
   sourceDocxFile: File | null,
+  originalResumeText: string,
+  targetRoleProfile: TargetRoleProfile | null,
 }) {
   const lockedProjects = React.useMemo(
     () => data.projects.filter(p => p.lockedVersion),
@@ -23,6 +30,23 @@ export function SummaryView({
   const [canExportPdf, setCanExportPdf] = React.useState(false);
   const [isCheckingExport, setIsCheckingExport] = React.useState(true);
   const [exportingTarget, setExportingTarget] = React.useState<'docx' | 'pdf' | null>(null);
+  const [isGeneratingFullResume, setIsGeneratingFullResume] = React.useState(false);
+  const [fullResumeDraft, setFullResumeDraft] = React.useState<null | {
+    title: string;
+    summary: string;
+    highlights: string[];
+    fullText: string;
+  }>(null);
+  const [fullResumeSelectionSignature, setFullResumeSelectionSignature] = React.useState('');
+  const targetRoleLabel = React.useMemo(() => {
+    if (!targetRoleProfile?.title) {
+      return '';
+    }
+
+    return targetRoleProfile.company
+      ? `${targetRoleProfile.title} · ${targetRoleProfile.company}`
+      : targetRoleProfile.title;
+  }, [targetRoleProfile]);
 
   React.useEffect(() => {
     setSelectedProjectIds(lockedProjectIds);
@@ -58,13 +82,24 @@ export function SummaryView({
     };
   }, [sourceDocxFile]);
 
-  const getLockedVersionText = (project: typeof lockedProjects[number]) => {
+  const getLockedVersionText = React.useCallback((project: typeof lockedProjects[number]) => {
     return project.lockedVersion === 'custom'
       ? project.customVersion
       : project.versions?.[project.lockedVersion as keyof typeof project.versions];
-  };
+  }, []);
 
   const selectedLockedProjects = lockedProjects.filter(project => selectedProjectIds.includes(project.id));
+  const selectedProjectSignature = React.useMemo(
+    () => JSON.stringify(selectedLockedProjects.map(project => ({
+      id: project.id,
+      lockedVersion: project.lockedVersion,
+      text: getLockedVersionText(project) || '',
+    }))),
+    [getLockedVersionText, selectedLockedProjects],
+  );
+  const fullResumeOutdated = Boolean(
+    fullResumeDraft && fullResumeSelectionSignature !== selectedProjectSignature,
+  );
 
   const buildReplacements = () => selectedLockedProjects.map(p => {
     const versionText = getLockedVersionText(p);
@@ -186,6 +221,108 @@ export function SummaryView({
     URL.revokeObjectURL(url);
   };
 
+  const handleGenerateFullResume = async () => {
+    if (selectedLockedProjects.length === 0) {
+      alert('请先选择至少一个项目版本，再生成整份简历。');
+      return;
+    }
+
+    if (!originalResumeText.trim()) {
+      alert('当前没有拿到原始简历内容，暂时无法生成整份简历。');
+      return;
+    }
+
+    setIsGeneratingFullResume(true);
+    try {
+      const draft = await generateFullResumeDraft({
+        resumeData: data,
+        originalResumeText,
+        selectedProjects: selectedLockedProjects.map(project => ({
+          name: project.name,
+          role: project.role,
+          duration: project.duration,
+          text: getLockedVersionText(project) || '',
+        })),
+        targetRole: targetRoleProfile,
+      });
+
+      setFullResumeDraft(draft);
+      setFullResumeSelectionSignature(selectedProjectSignature);
+    } catch (e) {
+      console.error(e);
+      alert('整份简历生成失败，请重试。');
+    } finally {
+      setIsGeneratingFullResume(false);
+    }
+  };
+
+  const handleCopyFullResume = () => {
+    if (!fullResumeDraft?.fullText.trim()) {
+      alert('请先生成整份简历。');
+      return;
+    }
+
+    navigator.clipboard.writeText(fullResumeDraft.fullText);
+  };
+
+  const handleDownloadFullResume = () => {
+    if (!fullResumeDraft?.fullText.trim()) {
+      alert('请先生成整份简历。');
+      return;
+    }
+
+    const markdown = [
+      `# ${fullResumeDraft.title}`,
+      '',
+      fullResumeDraft.summary,
+      '',
+      '## 这版简历的重点',
+      '',
+      ...fullResumeDraft.highlights.map(item => `- ${item}`),
+      '',
+      '## 完整正文',
+      '',
+      fullResumeDraft.fullText,
+    ].join('\n');
+
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'resume-full-draft.md';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  React.useEffect(() => {
+    const projectsForInterview = (selectedLockedProjects.length > 0
+      ? selectedLockedProjects
+      : lockedProjects
+    ).map(project => ({
+      name: project.name,
+      role: project.role,
+      duration: project.duration,
+      text: getLockedVersionText(project) || '',
+    })).filter(project => project.text.trim());
+
+    if (typeof window === 'undefined' || projectsForInterview.length === 0) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      RESUME_INTERVIEW_PROFILE_STORAGE_KEY,
+      JSON.stringify({
+        name: data.name,
+        targetRoleProfile,
+        overallIssues: data.overallIssues || [],
+        selectedProjects: projectsForInterview,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  }, [data.name, data.overallIssues, getLockedVersionText, lockedProjects, selectedLockedProjects, targetRoleProfile]);
+
   return (
     <div className="max-w-4xl mx-auto pt-12 px-6 pb-20">
       <button 
@@ -236,6 +373,98 @@ export function SummaryView({
           >
             <Copy className="w-5 h-5" /> 复制已选内容
           </button>
+        </div>
+      </div>
+
+      {targetRoleLabel && (
+        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-6">
+          <p className="text-sm text-text-main font-medium mb-1">这次是按目标岗位定向优化的</p>
+          <p className="text-sm text-text-muted leading-relaxed">
+            当前目标岗位：{targetRoleLabel}
+            {targetRoleProfile?.jobDescription?.trim()
+              ? '，并且已经参考了你填写的岗位描述。'
+              : '。如果下次补充岗位描述，定向程度还可以继续提高。'}
+          </p>
+        </div>
+      )}
+
+      <div className="bg-bg-card border border-border rounded-2xl p-6 mb-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 text-text-main font-medium mb-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              整份简历草稿
+            </div>
+            <p className="text-sm text-text-muted leading-relaxed">
+              这里不再只是导出几个项目段，而是会把你选中的项目版本合并进整份简历，直接给你一版完整草稿。
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={handleGenerateFullResume}
+              disabled={selectedLockedProjects.length === 0 || isGeneratingFullResume}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-hover disabled:bg-border disabled:text-text-muted text-white px-5 py-3 rounded-lg font-medium transition-colors"
+            >
+              {isGeneratingFullResume ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+              {fullResumeDraft ? '重新生成整份简历' : '生成整份简历'}
+            </button>
+            <button
+              onClick={handleCopyFullResume}
+              disabled={!fullResumeDraft}
+              className="flex items-center gap-2 bg-bg-main border border-border hover:bg-bg-hover disabled:bg-border disabled:text-text-muted text-text-main px-5 py-3 rounded-lg font-medium transition-colors"
+            >
+              <Copy className="w-5 h-5" /> 复制整份简历
+            </button>
+            <button
+              onClick={handleDownloadFullResume}
+              disabled={!fullResumeDraft}
+              className="flex items-center gap-2 bg-bg-main border border-border hover:bg-bg-hover disabled:bg-border disabled:text-text-muted text-text-main px-5 py-3 rounded-lg font-medium transition-colors"
+            >
+              <Download className="w-5 h-5" /> 下载整份简历
+            </button>
+          </div>
+        </div>
+
+        {!fullResumeDraft ? (
+          <div className="mt-6 rounded-xl border border-dashed border-border p-6 text-sm text-text-muted leading-relaxed">
+            先勾选你要带进最终简历的项目版本，再点上面的按钮，系统就会给你出一整份简历草稿。
+          </div>
+        ) : (
+          <div className="mt-6 space-y-5">
+            {fullResumeOutdated && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-text-main">
+                你刚刚改了项目选择，这份整份简历还是基于上一次勾选生成的。如果要拿最新版本，请重新生成一次。
+              </div>
+            )}
+
+            <div className="rounded-xl border border-border bg-bg-main p-5">
+              <h2 className="text-xl font-bold text-text-main mb-2">{fullResumeDraft.title}</h2>
+              <p className="text-sm text-text-muted leading-relaxed">{fullResumeDraft.summary}</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-bg-main p-5">
+              <h3 className="text-sm font-medium text-text-main mb-3">这版简历的重点</h3>
+              <div className="space-y-2">
+                {fullResumeDraft.highlights.map(item => (
+                  <p key={item} className="text-sm text-text-muted leading-relaxed">- {item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-bg-main p-5">
+              <h3 className="text-sm font-medium text-text-main mb-3">完整正文</h3>
+              <p className="text-sm text-text-main leading-relaxed whitespace-pre-wrap">{fullResumeDraft.fullText}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/interview"
+            className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-5 py-3 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
+          >
+            去刷基于这份简历的定向题
+          </Link>
         </div>
       </div>
 

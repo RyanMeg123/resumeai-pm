@@ -7,7 +7,7 @@ import { UploadView } from '@/components/UploadView'
 import { DashboardView } from '@/components/DashboardView'
 import { SummaryView } from '@/components/SummaryView'
 import { parseResume } from '@/lib/gemini'
-import { ResumeData, Project } from '@/lib/types'
+import { ResumeData, Project, TargetRoleProfile } from '@/lib/types'
 
 export default function Home() {
     const [step, setStep] = useState<'upload' | 'dashboard' | 'summary'>(
@@ -15,13 +15,17 @@ export default function Home() {
     )
     const [resumeData, setResumeData] = useState<ResumeData | null>(null)
     const [sourceDocxFile, setSourceDocxFile] = useState<File | null>(null)
+    const [originalResumeText, setOriginalResumeText] = useState('')
+    const [targetRoleProfile, setTargetRoleProfile] =
+        useState<TargetRoleProfile | null>(null)
 
     const handleAnalyze = async (
         text: string,
+        targetRole: TargetRoleProfile,
         sourceFile?: File | null,
     ): Promise<boolean> => {
         try {
-            const data = await parseResume(text)
+            const data = await parseResume(text, targetRole)
             if (!data.projects || data.projects.length === 0) {
                 alert('未检测到项目经历，请手动粘贴项目描述')
                 return false
@@ -34,6 +38,8 @@ export default function Home() {
             }))
 
             setSourceDocxFile(sourceFile || null)
+            setOriginalResumeText(text)
+            setTargetRoleProfile(targetRole)
             setResumeData(data)
             setStep('dashboard')
             return true
@@ -65,6 +71,7 @@ export default function Home() {
             {step === 'dashboard' && resumeData && (
                 <DashboardView
                     data={resumeData}
+                    targetRoleProfile={targetRoleProfile}
                     onUpdateProject={handleUpdateProject}
                     onFinish={() => setStep('summary')}
                 />
@@ -74,6 +81,8 @@ export default function Home() {
                     data={resumeData}
                     onBack={() => setStep('dashboard')}
                     sourceDocxFile={sourceDocxFile}
+                    originalResumeText={originalResumeText}
+                    targetRoleProfile={targetRoleProfile}
                 />
             )}
         </main>

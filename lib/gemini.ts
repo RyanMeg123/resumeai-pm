@@ -1,7 +1,14 @@
 /** @format */
 
-import { ResumeData, Project } from './types'
+import {
+    FullResumeDraft,
+    ResumeData,
+    Project,
+    TargetRoleProfile,
+} from './types'
 import { getAiPmRequirementsPrompt } from './ai-pm-requirements'
+import { InterviewQuestion } from './interview-types'
+import { ResumeInterviewProfile } from './interview-profile'
 
 const AIHUBMIX_API_KEY = 'sk-GrHV0pBLBOBV7ii3A34110CeAf484bC29d65CaA13c1e7e15'
 const AIHUBMIX_URL = 'https://aihubmix.com/v1/chat/completions'
@@ -273,8 +280,183 @@ function normalizeProjectVersions(value: unknown): {
     return { concise, detailed, datadriven }
 }
 
-export async function parseResume(text: string): Promise<ResumeData> {
+function normalizeFullResumeDraft(value: unknown): FullResumeDraft {
+    if (!isObject(value)) {
+        throw new Error('整份简历草稿格式不正确')
+    }
+
+    const title = isNonEmptyString(value.title) ? value.title.trim() : ''
+    const summary = isNonEmptyString(value.summary) ? value.summary.trim() : ''
+    const fullText = isNonEmptyString(value.fullText)
+        ? value.fullText.trim()
+        : ''
+    const highlights = Array.isArray(value.highlights)
+        ? value.highlights.filter(isNonEmptyString).map((item) => item.trim())
+        : []
+
+    if (!title || !summary || !fullText || highlights.length === 0) {
+        throw new Error('整份简历草稿内容不完整')
+    }
+
+    return {
+        title,
+        summary,
+        highlights: highlights.slice(0, 5),
+        fullText,
+    }
+}
+
+function normalizeGeneratedInterviewQuestions(value: unknown): InterviewQuestion[] {
+    if (!isObject(value) || !Array.isArray(value.questions)) {
+        throw new Error('定向题目格式不正确')
+    }
+
+    const questions = value.questions
+        .filter(isObject)
+        .map((item, index) => ({
+            id:
+                (isNonEmptyString(item.id) && item.id.trim()) ||
+                `resume-q-${index + 1}`,
+            index:
+                typeof item.index === 'number' && Number.isFinite(item.index)
+                    ? item.index
+                    : index + 1,
+            category:
+                (isNonEmptyString(item.category) && item.category.trim()) ||
+                '过往经历与行为题',
+            prompt:
+                (isNonEmptyString(item.prompt) && item.prompt.trim()) ||
+                '',
+        }))
+        .filter((item) => item.prompt)
+
+    if (questions.length === 0) {
+        throw new Error('定向题目为空')
+    }
+
+    return questions.map((item, index) => ({
+        ...item,
+        id: item.id || `resume-q-${index + 1}`,
+        index: index + 1,
+    }))
+}
+
+function normalizeGeneratedInterviewQuestion(value: unknown): InterviewQuestion {
+    if (!isObject(value)) {
+        throw new Error('模拟面试问题格式不正确')
+    }
+
+    const prompt = isNonEmptyString(value.prompt) ? value.prompt.trim() : ''
+    const category = isNonEmptyString(value.category)
+        ? value.category.trim()
+        : '过往经历与行为题'
+
+    if (!prompt) {
+        throw new Error('模拟面试问题为空')
+    }
+
+    return {
+        id:
+            (isNonEmptyString(value.id) && value.id.trim()) ||
+            `mock-q-${Date.now()}`,
+        index:
+            typeof value.index === 'number' && Number.isFinite(value.index)
+                ? value.index
+                : 1,
+        category,
+        prompt,
+    }
+}
+
+function buildTargetRolePrompt(targetRole?: TargetRoleProfile | null) {
+    if (!targetRole?.title?.trim()) {
+        return '当前没有提供目标岗位信息，请按通用 AI 产品经理岗位标准来分析。'
+    }
+
+    const lines = [`- 目标岗位：${targetRole.title.trim()}`]
+
+    if (targetRole.company.trim()) {
+        lines.push(`- 目标公司：${targetRole.company.trim()}`)
+    }
+
+    if (targetRole.jobDescription.trim()) {
+        lines.push(`- 岗位描述：${targetRole.jobDescription.trim()}`)
+    }
+
+    lines.push(
+        '- 你的分析、改写和补充建议都要优先贴这份目标岗位，而不是只做通用润色。',
+    )
+
+    return lines.join('\n')
+}
+
+function buildFallbackFullResumeDraft({
+    resumeData,
+    selectedProjects,
+    targetRole,
+}: {
+    resumeData: ResumeData
+    selectedProjects: Array<{
+        name: string
+        role: string
+        duration: string
+        text: string
+    }>
+    targetRole?: TargetRoleProfile | null
+}): FullResumeDraft {
+    const title = targetRole?.title?.trim()
+        ? `${targetRole.title.trim()}定向简历草稿`
+        : 'AI 产品经理简历草稿'
+
+    const summary = `已按当前目标岗位整理出一版整份简历草稿。你可以先直接使用这版，再补充更细的数字、结果和岗位关键词。`
+
+    const highlights = [
+        '已把你锁定的项目版本合并进整份简历草稿',
+        targetRole?.title?.trim()
+            ? `内容会优先贴近“${targetRole.title.trim()}”岗位`
+            : '内容按通用 AI 产品经理岗位标准整理',
+        '没有明确数据的地方，建议再补一轮结果和指标',
+    ]
+
+    const projectText = selectedProjects
+        .map(
+            (project) =>
+                `【${project.name}】\n${project.role} | ${project.duration}\n${project.text}`,
+        )
+        .join('\n\n')
+
+    const educationText =
+        resumeData.education.length > 0
+            ? resumeData.education
+                  .map(
+                      (item) =>
+                          `${item.school}${
+                              item.major ? ` · ${item.major}` : ''
+                          }${item.year ? ` · ${item.year}` : ''}`,
+                  )
+                  .join('\n')
+            : '【建议补充：教育经历】'
+
+    return {
+        title,
+        summary,
+        highlights,
+        fullText: `姓名：${resumeData.name}\n求职方向：${
+            targetRole?.title?.trim() || 'AI 产品经理'
+        }\n\n个人概述：\n${summary}\n\n项目经历：\n${
+            projectText || '【建议补充：核心项目经历】'
+        }\n\n教育经历：\n${educationText}`,
+    }
+}
+
+export async function parseResume(
+    text: string,
+    targetRole?: TargetRoleProfile | null,
+): Promise<ResumeData> {
     const prompt = `请分析下面这份简历，并只提取“项目经历、包含项目内容的工作经历、与产品相关的核心实践”。
+
+本次求职目标如下：
+${buildTargetRolePrompt(targetRole)}
 
 你的任务不是简单摘要，而是站在 AI 产品经理招聘视角做诊断。请按以下标准打分和指出问题：
 - PM相关度：是否体现需求洞察、产品定义、方案设计、跨团队推进、上线迭代。
@@ -332,8 +514,12 @@ ${text}
 
 export async function optimizeProject(
     project: Project,
+    targetRole?: TargetRoleProfile | null,
 ): Promise<{ concise: string; detailed: string; datadriven: string }> {
     const prompt = `请把下面这段项目经历，重写成适合 AI 产品经理求职的 3 个版本。
+
+本次求职目标如下：
+${buildTargetRolePrompt(targetRole)}
 
 项目名称：${project.name}
 角色：${project.role}
@@ -378,8 +564,12 @@ ${AI_PM_REQUIREMENTS_PROMPT}
 export async function* refineProjectStream(
     currentText: string,
     userRequest: string,
+    targetRole?: TargetRoleProfile | null,
 ) {
     const prompt = `用户想继续微调一段项目经历，让它更符合 AI 产品经理岗位。
+
+本次求职目标如下：
+${buildTargetRolePrompt(targetRole)}
 
 当前版本：
 ${currentText}
@@ -451,4 +641,345 @@ ${AI_PM_REQUIREMENTS_PROMPT}
             }
         }
     }
+}
+
+export async function generateFullResumeDraft({
+    resumeData,
+    originalResumeText,
+    selectedProjects,
+    targetRole,
+}: {
+    resumeData: ResumeData
+    originalResumeText: string
+    selectedProjects: Array<{
+        name: string
+        role: string
+        duration: string
+        text: string
+    }>
+    targetRole?: TargetRoleProfile | null
+}): Promise<FullResumeDraft> {
+    const selectedProjectText = selectedProjects
+        .map(
+            (project, index) => `项目 ${index + 1}：
+名称：${project.name}
+角色：${project.role}
+时间：${project.duration}
+确认版内容：
+${project.text}`,
+        )
+        .join('\n\n')
+
+    const educationText =
+        resumeData.education.length > 0
+            ? resumeData.education
+                  .map(
+                      (item, index) =>
+                          `${index + 1}. ${item.school}${
+                              item.major ? `，${item.major}` : ''
+                          }${item.year ? `，${item.year}` : ''}`,
+                  )
+                  .join('\n')
+            : '暂无明确教育信息'
+
+    const fallback = buildFallbackFullResumeDraft({
+        resumeData,
+        selectedProjects,
+        targetRole,
+    })
+
+    const prompt = `请基于下面这些信息，输出一份“整份简历草稿”，用于 AI 产品经理岗位投递。
+
+本次求职目标如下：
+${buildTargetRolePrompt(targetRole)}
+
+候选人姓名：${resumeData.name}
+
+教育信息：
+${educationText}
+
+整体简历诊断里当前最需要补的点：
+${resumeData.overallIssues?.join('\n') || '暂无'}
+
+原始简历全文：
+${originalResumeText}
+
+下面这些项目版本，是用户已经确认过、希望放进最终简历的内容。你必须优先使用它们，覆盖原始简历里对应的项目表达：
+${selectedProjectText || '暂无已确认项目'}
+
+你的任务：
+1. 输出一份完整可投递的简历草稿，不要只改项目段。
+2. 尽量保留原始简历里真实存在的教育、经历、项目和背景信息。
+3. 对于已确认的项目，必须优先采用上面的确认版内容。
+4. 可以重组顺序、补充更好的标题和概述，但不要编造不存在的公司、数据、职责或结果。
+5. 如果某处信息明显不够完整，可以用【建议补充：...】提示，但不要大面积留空。
+6. 整体风格要像真实候选人的简历，不要写成说明文，不要写成咨询报告。
+7. 最终 fullText 必须是一整份简历正文，建议包含：求职方向、个人概述、核心亮点、项目经历、教育经历。只有原始简历里明确有依据时，才加入技能或其他模块。
+
+请严格返回一个 JSON 对象，必须符合以下 schema：
+{
+  "title": "这份整份简历草稿的标题",
+  "summary": "用1段话概括这份整份简历怎么投、适合什么岗位",
+  "highlights": ["亮点1", "亮点2", "亮点3"],
+  "fullText": "完整简历正文，使用简体中文，保留清晰分段和换行"
+}`
+
+    return requestJsonCompletionSafe({
+        prompt,
+        maxTokens: 4096,
+        timeoutMs: 45000,
+        maxAttempts: 3,
+        validate: normalizeFullResumeDraft,
+        fallback,
+    })
+}
+
+function buildFallbackResumeInterviewQuestions({
+    profile,
+    count,
+}: {
+    profile: ResumeInterviewProfile
+    count: number
+}): InterviewQuestion[] {
+    const project = profile.selectedProjects[0]
+    const targetRole = profile.targetRoleProfile?.title || 'AI 产品经理'
+    const baseQuestions: Array<{
+        category: InterviewQuestion['category']
+        prompt: string
+    }> = [
+        {
+            category: '过往经历与行为题',
+            prompt: `请你结合最近一次最核心的项目，介绍一下为什么你适合“${targetRole}”这个岗位？`,
+        },
+        {
+            category: '推进与协作',
+            prompt: `结合${project?.name || '你的核心项目'}，讲一次你是怎么推动算法、工程或业务一起把事情做成的？`,
+        },
+        {
+            category: '评测与指标',
+            prompt: `如果面试官追问${project?.name || '这个项目'}到底怎么衡量效果，你会怎么讲评测指标和上线标准？`,
+        },
+        {
+            category: '产品设计题',
+            prompt: `如果让你继续把${project?.name || '这个项目'}做大，你下一步会优先优化哪个用户场景，为什么？`,
+        },
+        {
+            category: '风险与责任',
+            prompt: `这个方向里你最担心的风险是什么？你会怎么提前控制？`,
+        },
+        {
+            category: '商业与策略',
+            prompt: `如果老板质疑这个方向的投入产出比，你会怎么证明这件事值得继续做？`,
+        },
+        {
+            category: 'AI 基础理解',
+            prompt: `如果面试官问你为什么这个场景适合用大模型，而不是传统规则或流程系统，你会怎么回答？`,
+        },
+        {
+            category: '过往经历与行为题',
+            prompt: `结合你简历里最容易被质疑的一点，面试官如果深挖，你会怎么把它讲圆？`,
+        },
+    ]
+
+    const issueQuestions: InterviewQuestion[] = profile.overallIssues.map((issue, index) => ({
+        id: `resume-q-issue-${index + 1}`,
+        index: index + 1,
+        category: '过往经历与行为题',
+        prompt: `你的简历里有一个明显短板是“${issue}”。如果面试官当场追问，你会怎么回应并补足说服力？`,
+    }))
+
+    const combined: InterviewQuestion[] = [...issueQuestions]
+    for (const item of baseQuestions) {
+        combined.push({
+            id: `resume-q-base-${combined.length + 1}`,
+            index: combined.length + 1,
+            category: item.category,
+            prompt: item.prompt,
+        })
+    }
+
+    return combined.slice(0, Math.max(1, count))
+}
+
+export async function generateResumeInterviewQuestions({
+    profile,
+    count,
+}: {
+    profile: ResumeInterviewProfile
+    count: number
+}): Promise<InterviewQuestion[]> {
+    const prompt = `你现在要根据候选人的最近一次简历诊断结果，生成一组“面试定向题”。
+
+候选人信息：
+- 姓名：${profile.name}
+- 目标岗位：${profile.targetRoleProfile?.title || 'AI 产品经理'}
+- 目标公司：${profile.targetRoleProfile?.company || '未填写'}
+- 岗位描述：${profile.targetRoleProfile?.jobDescription || '未填写'}
+
+简历里当前最需要补的点：
+${profile.overallIssues.join('\n') || '暂无'}
+
+候选人已经确认过的项目版本：
+${profile.selectedProjects
+    .map(
+        (project, index) => `${index + 1}. ${project.name}
+角色：${project.role}
+时间：${project.duration}
+内容：
+${project.text}`,
+    )
+    .join('\n\n') || '暂无'}
+
+出题要求：
+1. 一共输出 ${count} 道题。
+2. 这些题要明显贴着候选人的简历、目标岗位和当前短板来问，不能只是通用题库复述。
+3. 题型里至少包含：项目深挖、指标追问、协作推进、岗位匹配、风险判断。
+4. 问法要像真实面试官，不要写成练习说明。
+5. category 只能从下面这些里选：AI 基础理解、RAG 与知识库、Agent 与自动化、评测与指标、产品设计题、商业与策略、推进与协作、风险与责任、过往经历与行为题、趋势与判断。
+
+请严格返回一个 JSON 对象，格式如下：
+{
+  "questions": [
+    {
+      "id": "resume-q-1",
+      "index": 1,
+      "category": "过往经历与行为题",
+      "prompt": "问题正文"
+    }
+  ]
+}`
+
+    return requestJsonCompletionSafe({
+        prompt,
+        maxTokens: 2048,
+        timeoutMs: 45000,
+        maxAttempts: 3,
+        validate: normalizeGeneratedInterviewQuestions,
+        fallback: buildFallbackResumeInterviewQuestions({ profile, count }),
+    })
+}
+
+function buildFallbackMockInterviewQuestion({
+    profile,
+    round,
+}: {
+    profile?: ResumeInterviewProfile | null
+    round: number
+}): InterviewQuestion {
+    const project = profile?.selectedProjects[0]
+    const targetRole = profile?.targetRoleProfile?.title || 'AI 产品经理'
+
+    if (round === 1) {
+        return {
+            id: 'mock-q-1',
+            index: 1,
+            category: '过往经历与行为题',
+            prompt: `请你先做一个 1 到 2 分钟的自我介绍，并说明为什么你适合“${targetRole}”这个岗位。`,
+        }
+    }
+
+    if (round === 2) {
+        return {
+            id: 'mock-q-2',
+            index: 2,
+            category: '推进与协作',
+            prompt: `我们具体聊聊${project?.name || '你简历里最重要的项目'}。你当时到底做了哪些关键推进，怎么把算法、工程和业务拉到同一条线上？`,
+        }
+    }
+
+    if (round === 3) {
+        return {
+            id: 'mock-q-3',
+            index: 3,
+            category: '评测与指标',
+            prompt: `如果我继续追问这个项目的结果，你会用哪些指标证明它真的做成了？哪些数字是你最希望在面试里主动讲出来的？`,
+        }
+    }
+
+    if (round === 4) {
+        return {
+            id: 'mock-q-4',
+            index: 4,
+            category: '产品设计题',
+            prompt: `如果让你现在继续做这个方向，你下一步会优先优化哪个用户场景？为什么是它，不是别的？`,
+        }
+    }
+
+    return {
+        id: `mock-q-${round}`,
+        index: round,
+        category: '风险与责任',
+        prompt: `最后一个问题：如果这个 AI 能力上线后出现明显错误回答或业务方质疑价值，你会怎么处理？`,
+    }
+}
+
+export async function generateMockInterviewQuestion({
+    profile,
+    history,
+    round,
+}: {
+    profile?: ResumeInterviewProfile | null
+    history: Array<{
+        question: string
+        category: string
+        answer: string
+    }>
+    round: number
+}): Promise<InterviewQuestion> {
+    const prompt = `你现在扮演一位正在面 AI 产品经理的真实面试官。
+
+目标岗位信息：
+- 目标岗位：${profile?.targetRoleProfile?.title || 'AI 产品经理'}
+- 目标公司：${profile?.targetRoleProfile?.company || '未填写'}
+- 岗位描述：${profile?.targetRoleProfile?.jobDescription || '未填写'}
+
+候选人简历里的重点项目：
+${profile?.selectedProjects
+    ?.map(
+        (project, index) => `${index + 1}. ${project.name}
+角色：${project.role}
+时间：${project.duration}
+内容：
+${project.text}`,
+    )
+    .join('\n\n') || '暂无'}
+
+候选人的简历短板：
+${profile?.overallIssues?.join('\n') || '暂无'}
+
+当前已经进行到第 ${round} 轮。
+
+前面的问答记录：
+${history
+    .map(
+        (item, index) => `第 ${index + 1} 轮
+问题类别：${item.category}
+问题：${item.question}
+回答：${item.answer}`,
+    )
+    .join('\n\n') || '这是第一轮，请先从自我介绍或岗位匹配开始。'}
+
+你的任务：
+1. 只生成下一道面试官问题，不要给答案，不要解释。
+2. 第 1 轮优先让候选人做自我介绍或讲岗位匹配。
+3. 后续轮次必须根据上一轮回答追问，问题要更像真实面试官，不要像题库列表。
+4. 优先围绕项目深挖、指标追问、协作推进、取舍判断、风险控制来问。
+5. category 只能从下面这些里选：AI 基础理解、RAG 与知识库、Agent 与自动化、评测与指标、产品设计题、商业与策略、推进与协作、风险与责任、过往经历与行为题、趋势与判断。
+
+请严格返回一个 JSON 对象，格式如下：
+{
+  "id": "mock-q-${round}",
+  "index": ${round},
+  "category": "过往经历与行为题",
+  "prompt": "下一道面试官问题"
+}`
+
+    return requestJsonCompletionSafe({
+        prompt,
+        maxTokens: 1024,
+        timeoutMs: 45000,
+        maxAttempts: 3,
+        validate: normalizeGeneratedInterviewQuestion,
+        fallback: buildFallbackMockInterviewQuestion({ profile, round }),
+    })
 }

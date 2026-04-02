@@ -2,7 +2,42 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { loadInterviewQuestionBank } from '@/lib/interview-question-bank'
 import { evaluateInterviewSubmission } from '@/lib/interview-scoring'
-import { InterviewAnswerInput } from '@/lib/interview-types'
+import { InterviewAnswerInput, InterviewQuestion } from '@/lib/interview-types'
+
+function normalizeQuestions(value: unknown): InterviewQuestion[] {
+    if (!Array.isArray(value)) {
+        return []
+    }
+
+    return value
+        .map((item, index) => {
+            if (
+                typeof item !== 'object' ||
+                item === null ||
+                typeof (item as InterviewQuestion).prompt !== 'string' ||
+                typeof (item as InterviewQuestion).category !== 'string'
+            ) {
+                return null
+            }
+
+            const question = item as InterviewQuestion
+
+            return {
+                id:
+                    typeof question.id === 'string' && question.id.trim()
+                        ? question.id
+                        : `custom-q-${index + 1}`,
+                index:
+                    typeof question.index === 'number' &&
+                    Number.isFinite(question.index)
+                        ? question.index
+                        : index + 1,
+                category: question.category,
+                prompt: question.prompt,
+            }
+        })
+        .filter((item): item is InterviewQuestion => Boolean(item))
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -17,6 +52,7 @@ export async function POST(request: NextRequest) {
                 : 0
 
         const bank = await loadInterviewQuestionBank()
+        const customQuestions = normalizeQuestions(body.questions)
         const rawQuestionIds: unknown[] = Array.isArray(body.questionIds)
             ? body.questionIds
             : []
@@ -24,7 +60,10 @@ export async function POST(request: NextRequest) {
             (item): item is string => typeof item === 'string',
         )
 
-        const questions = bank.filter((item) => selectedIds.includes(item.id))
+        const questions =
+            customQuestions.length > 0
+                ? customQuestions
+                : bank.filter((item) => selectedIds.includes(item.id))
 
         if (questions.length === 0) {
             return NextResponse.json(

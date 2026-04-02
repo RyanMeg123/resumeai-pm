@@ -21,6 +21,19 @@ export interface Project {
   chatHistory?: { role: 'user' | 'ai'; content: string }[];
 }
 
+export interface TargetRoleProfile {
+  title: string;
+  company: string;
+  jobDescription: string;
+}
+
+export interface FullResumeDraft {
+  title: string;
+  summary: string;
+  highlights: string[];
+  fullText: string;
+}
+
 export interface ResumeData {
   name: string;
   education: { school: string; major: string; year: string }[];
