@@ -244,6 +244,11 @@ export function InterviewPracticeClient({
 }: {
     allQuestions: InterviewQuestion[]
 }) {
+    const totalQuestions = allQuestions.length
+    const totalQuestionsLabel = `${totalQuestions}题`
+    const totalQuestionsCountLabel = `${totalQuestions} 道`
+    const marathonModeLabel = `${totalQuestionsLabel}全刷`
+
     const categories = useMemo(
         () => Array.from(new Set(allQuestions.map((item) => item.category))),
         [allQuestions],
@@ -258,6 +263,9 @@ export function InterviewPracticeClient({
     )
 
     const [activeMode, setActiveMode] = useState<PracticeMode>('marathon')
+    const [activeMarathonCategory, setActiveMarathonCategory] = useState(
+        categories[0] ?? '',
+    )
     const [resumeProfile, setResumeProfile] = useState<ResumeInterviewProfile | null>(null)
     const [marathonCompleted, setMarathonCompleted] = useState(false)
 
@@ -353,7 +361,32 @@ export function InterviewPracticeClient({
         [answers, sessionQuestions],
     )
 
+    const activeMarathonGroup = useMemo(
+        () =>
+            groupedQuestions.find(
+                (group) => group.category === activeMarathonCategory,
+            ) ?? groupedQuestions[0],
+        [activeMarathonCategory, groupedQuestions],
+    )
+    const activeMarathonGroupIndex = useMemo(
+        () =>
+            groupedQuestions.findIndex(
+                (group) => group.category === activeMarathonGroup?.category,
+            ),
+        [activeMarathonGroup?.category, groupedQuestions],
+    )
     const currentQuestion = sessionQuestions[currentIndex]
+
+    useEffect(() => {
+        if (
+            groupedQuestions.length > 0 &&
+            !groupedQuestions.some(
+                (group) => group.category === activeMarathonCategory,
+            )
+        ) {
+            setActiveMarathonCategory(groupedQuestions[0].category)
+        }
+    }, [activeMarathonCategory, groupedQuestions])
 
     const requestEvaluation = async ({
         questions,
@@ -405,6 +438,9 @@ export function InterviewPracticeClient({
         setMarathonAnswers({})
         setMarathonResult(null)
         setMarathonElapsedSeconds(0)
+        if (groupedQuestions[0]) {
+            setActiveMarathonCategory(groupedQuestions[0].category)
+        }
         setMarathonStartedAt(Date.now())
     }
 
@@ -412,6 +448,9 @@ export function InterviewPracticeClient({
         setMarathonAnswers({})
         setMarathonResult(null)
         setMarathonElapsedSeconds(0)
+        if (groupedQuestions[0]) {
+            setActiveMarathonCategory(groupedQuestions[0].category)
+        }
         setMarathonStartedAt(null)
     }
 
@@ -581,17 +620,18 @@ export function InterviewPracticeClient({
                 <div className="mb-8 flex items-center justify-between gap-4">
                     <div>
                         <Link
-                            href="/"
+                            href="/resume"
                             className="mb-4 inline-flex items-center gap-2 text-sm text-text-muted transition-colors hover:text-text-main"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            返回首页
+                            去简历打磨
                         </Link>
                         <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
                             AI 产品经理面试练习场
                         </h1>
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted md:text-base">
-                            先把 100 道高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
+                            先把 {totalQuestionsCountLabel}
+                            高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
                         </p>
                     </div>
                     <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur md:block">
@@ -614,7 +654,7 @@ export function InterviewPracticeClient({
                         }`}
                     >
                         <LibraryBig className="h-4 w-4" />
-                        100题全刷
+                        {marathonModeLabel}
                     </button>
                     <button
                         onClick={() => setActiveMode('mock')}
@@ -677,7 +717,7 @@ export function InterviewPracticeClient({
                                     <div className="flex items-center gap-3 text-primary">
                                         <LibraryBig className="h-5 w-5" />
                                         <span className="text-sm font-medium">
-                                            100题全刷模式
+                                            {marathonModeLabel}模式
                                         </span>
                                     </div>
                                     <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -686,7 +726,7 @@ export function InterviewPracticeClient({
                                                 总题量
                                             </div>
                                             <div className="mt-2 text-3xl font-semibold">
-                                                100
+                                                {totalQuestions}
                                             </div>
                                             <div className="mt-2 text-sm text-text-muted">
                                                 一次性把高频面试题过完
@@ -725,7 +765,7 @@ export function InterviewPracticeClient({
                                             onClick={startMarathon}
                                             className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
                                         >
-                                            开始刷 100 题
+                                            开始刷 {totalQuestionsCountLabel}
                                         </button>
                                         {marathonCompleted && (
                                             <div className="text-sm text-success">
@@ -758,7 +798,7 @@ export function InterviewPracticeClient({
                                             </h2>
                                         </div>
                                         <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
-                                            <p>可以先每题写短版，确保 100 题都过一遍。</p>
+                                            <p>可以先每题写短版，确保 {totalQuestionsLabel}都过一遍。</p>
                                             <p>第二轮再回头补低分题，把答案拉得更完整。</p>
                                             <p>行为题尽量写成真实经历，不要只讲原则。</p>
                                         </div>
@@ -808,24 +848,32 @@ export function InterviewPracticeClient({
                                             )
 
                                             return (
-                                                <a
+                                                <button
                                                     key={group.category}
-                                                    href={`#${group.category}`}
-                                                    className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
+                                                    onClick={() =>
+                                                        setActiveMarathonCategory(
+                                                            group.category,
+                                                        )
+                                                    }
+                                                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                                        activeMarathonGroup?.category ===
+                                                        group.category
+                                                            ? 'border-primary bg-primary/10 text-text-main'
+                                                            : 'border-white/10 bg-black/20 text-text-muted hover:border-white/20 hover:text-text-main'
+                                                    }`}
                                                 >
                                                     {group.category} {groupAnswered}/
                                                     {group.questions.length}
-                                                </a>
+                                                </button>
                                             )
                                         })}
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
-                                    {groupedQuestions.map((group) => (
+                                {activeMarathonGroup && (
+                                    <div className="space-y-6">
                                         <section
-                                            key={group.category}
-                                            id={group.category}
+                                            key={activeMarathonGroup.category}
                                             className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur"
                                         >
                                             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -834,21 +882,70 @@ export function InterviewPracticeClient({
                                                         模块
                                                     </div>
                                                     <h2 className="mt-2 text-2xl font-semibold">
-                                                        {group.category}
+                                                        {activeMarathonGroup.category}
                                                     </h2>
+                                                    <p className="mt-2 text-sm leading-7 text-text-muted">
+                                                        现在只展示这个模块的题。切到别的 tab 才会看见别的模块。
+                                                    </p>
                                                 </div>
-                                                <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
-                                                    已答{' '}
-                                                    {countAnswered(
-                                                        group.questions,
-                                                        marathonAnswers,
-                                                    )}
-                                                    /{group.questions.length}
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                                        已答{' '}
+                                                        {countAnswered(
+                                                            activeMarathonGroup.questions,
+                                                            marathonAnswers,
+                                                        )}
+                                                        /{activeMarathonGroup.questions.length}
+                                                    </div>
+                                                    <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-text-muted">
+                                                        第 {activeMarathonGroupIndex + 1} /{' '}
+                                                        {groupedQuestions.length} 组
+                                                    </div>
                                                 </div>
                                             </div>
 
+                                            <div className="mb-6 flex flex-wrap gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const previousGroup =
+                                                            groupedQuestions[
+                                                                activeMarathonGroupIndex - 1
+                                                            ]
+                                                        if (previousGroup) {
+                                                            setActiveMarathonCategory(
+                                                                previousGroup.category,
+                                                            )
+                                                        }
+                                                    }}
+                                                    disabled={activeMarathonGroupIndex <= 0}
+                                                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    上一组
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const nextGroup =
+                                                            groupedQuestions[
+                                                                activeMarathonGroupIndex + 1
+                                                            ]
+                                                        if (nextGroup) {
+                                                            setActiveMarathonCategory(
+                                                                nextGroup.category,
+                                                            )
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        activeMarathonGroupIndex >=
+                                                        groupedQuestions.length - 1
+                                                    }
+                                                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-text-main transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    下一组
+                                                </button>
+                                            </div>
+
                                             <div className="space-y-4">
-                                                {group.questions.map((question) => (
+                                                {activeMarathonGroup.questions.map((question) => (
                                                     <div
                                                         key={question.id}
                                                         className="rounded-[28px] border border-white/10 bg-black/20 p-5"
@@ -907,18 +1004,18 @@ export function InterviewPracticeClient({
                                                 ))}
                                             </div>
                                         </section>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
 
                                 <div className="sticky bottom-6 z-10 rounded-[28px] border border-white/10 bg-[#0B0C11]/90 p-4 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur">
                                     <div className="flex flex-wrap items-center justify-between gap-4">
                                         <div className="text-sm leading-7 text-text-muted">
                                             当前已答 {marathonAnsweredCount}/
-                                            {allQuestions.length} 题。
+                                            {totalQuestions} 题。
                                             {marathonAnsweredCount ===
-                                            allQuestions.length
+                                            totalQuestions
                                                 ? ' 这轮交卷后会解锁抽卡式答题。'
-                                                : ' 只有 100 题全部答完，抽卡模式才会解锁。'}
+                                                : ` 只有 ${totalQuestionsCountLabel}全部答完，抽卡模式才会解锁。`}
                                         </div>
                                         <button
                                             onClick={submitMarathon}
@@ -927,7 +1024,7 @@ export function InterviewPracticeClient({
                                         >
                                             {marathonSubmitting
                                                 ? '正在交卷...'
-                                                : '提交 100 题'}
+                                                : `提交 ${totalQuestionsCountLabel}`}
                                         </button>
                                     </div>
                                 </div>
@@ -936,15 +1033,15 @@ export function InterviewPracticeClient({
 
                         {marathonResult && (
                             <ResultPanel
-                                title="100题全刷总分"
+                                title={`${marathonModeLabel}总分`}
                                 result={marathonResult}
                                 onReset={resetMarathon}
                                 onRetry={startMarathon}
-                                retryLabel="再刷 100 题"
+                                retryLabel={`再刷 ${totalQuestionsCountLabel}`}
                                 extraHint={
                                     marathonCompleted
-                                        ? '你已经完成了 100 题全刷，抽卡式答题现在已经解锁。'
-                                        : '这轮还没把 100 题全部答完，所以抽卡式答题暂时不会解锁。'
+                                        ? `你已经完成了 ${marathonModeLabel}，抽卡式答题现在已经解锁。`
+                                        : `这轮还没把 ${totalQuestionsCountLabel}全部答完，所以抽卡式答题暂时不会解锁。`
                                 }
                                 extraAction={
                                     marathonCompleted ? (
@@ -1488,14 +1585,14 @@ export function InterviewPracticeClient({
                                 </span>
                             </div>
                             <h2 className="mt-4 text-2xl font-semibold">
-                                先回首页跑一遍简历诊断
+                                先去简历打磨跑一遍诊断
                             </h2>
                             <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
                                 完成简历分析后，系统会自动把目标岗位、项目经历和薄弱点带到这里，再给你出一轮定向题。
                             </p>
                             <div className="mt-6">
                                 <Link
-                                    href="/"
+                                    href="/resume"
                                     className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
                                 >
                                     去做简历诊断
@@ -1826,17 +1923,18 @@ export function InterviewPracticeClient({
                             </span>
                         </div>
                         <h2 className="mt-4 text-2xl font-semibold">
-                            先完成一轮 100 题全刷
+                            先完成一轮 {marathonModeLabel}
                         </h2>
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
-                            你要先把 100 道题完整交卷一次，系统才会开放抽卡式答题。这样做的目的是先把底图摸清楚，再去针对性补弱项。
+                            你要先把 {totalQuestionsCountLabel}
+                            完整交卷一次，系统才会开放抽卡式答题。这样做的目的是先把底图摸清楚，再去针对性补弱项。
                         </p>
                         <div className="mt-6">
                             <button
                                 onClick={() => setActiveMode('marathon')}
                                 className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
                             >
-                                去刷 100 题
+                                去刷 {totalQuestionsCountLabel}
                             </button>
                         </div>
                     </section>

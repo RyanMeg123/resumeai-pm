@@ -460,10 +460,10 @@ export function SummaryView({
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            href="/interview"
+            href="/"
             className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-5 py-3 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
           >
-            去刷基于这份简历的定向题
+            去首页刷基于这份简历的定向题
           </Link>
         </div>
       </div>

@@ -125,10 +125,10 @@ export function UploadView({
                 </p>
                 <div className="mb-8 flex justify-center">
                     <Link
-                        href="/interview"
+                        href="/"
                         className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
                     >
-                        去刷 AI PM 面试题
+                        去首页刷 AI PM 面试题
                     </Link>
                 </div>
                 <div className="flex justify-center gap-8 text-sm text-text-muted">
