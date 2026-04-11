@@ -10,9 +10,19 @@ import { getAiPmRequirementsPrompt } from './ai-pm-requirements'
 import { InterviewQuestion } from './interview-types'
 import { ResumeInterviewProfile } from './interview-profile'
 
-const AIHUBMIX_API_KEY = 'sk-GrHV0pBLBOBV7ii3A34110CeAf484bC29d65CaA13c1e7e15'
 const AIHUBMIX_URL = 'https://aihubmix.com/v1/chat/completions'
 const AI_PM_REQUIREMENTS_PROMPT = getAiPmRequirementsPrompt()
+
+function getAiHubMixApiKey() {
+    const apiKey =
+        process.env.AIHUBMIX_API_KEY || process.env.GEMINI_API_KEY || ''
+
+    if (!apiKey) {
+        throw new Error('缺少 AIHUBMIX_API_KEY 环境变量')
+    }
+
+    return apiKey
+}
 
 const AI_PM_SYSTEM_PROMPT = `你是一名资深 AI 产品经理招聘顾问和简历重构专家。
 
@@ -104,7 +114,7 @@ async function requestJsonCompletion<T>({
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${AIHUBMIX_API_KEY}`,
+                        Authorization: `Bearer ${getAiHubMixApiKey()}`,
                     },
                     body: JSON.stringify({
                         model: 'gemini-3.1-flash-lite-preview',
@@ -592,7 +602,7 @@ ${AI_PM_REQUIREMENTS_PROMPT}
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${AIHUBMIX_API_KEY}`,
+            Authorization: `Bearer ${getAiHubMixApiKey()}`,
         },
         body: JSON.stringify({
             model: 'gemini-3.1-flash-lite-preview',
