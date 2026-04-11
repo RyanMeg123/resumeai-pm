@@ -6,6 +6,7 @@ import {
     ArrowLeft,
     Brain,
     Clock3,
+    Download,
     FileCheck2,
     FolderKanban,
     Gauge,
@@ -55,6 +56,96 @@ function countAnswered(
     answers: Record<string, string>,
 ) {
     return questions.filter((question) => answers[question.id]?.trim()).length
+}
+
+function buildReviewMarkdown(title: string, result: InterviewEvaluation): string {
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+    const lines: string[] = [
+        `# AI 产品经理面试复盘报告`,
+        ``,
+        `> 生成时间：${dateStr}`,
+        ``,
+        `---`,
+        ``,
+        `## 总体评分`,
+        ``,
+        `| 项目 | 数值 |`,
+        `|------|------|`,
+        `| 总分 | **${result.overallScore}** / 100 |`,
+        `| 完成度 | ${result.completionRate}% |`,
+        `| 已答 / 总题 | ${result.answeredQuestions} / ${result.totalQuestions} |`,
+        `| 用时 | ${formatDuration(result.elapsedSeconds)} |`,
+        ``,
+        `---`,
+        ``,
+        `## 模块得分`,
+        ``,
+        `| 模块 | 得分 | 评级 |`,
+        `|------|------|------|`,
+    ]
+
+    for (const cat of result.categoryScores) {
+        const grade = cat.score >= 80 ? '🟢 强' : cat.score >= 60 ? '🟡 中' : '🔴 弱'
+        lines.push(`| ${cat.category} | ${cat.score} | ${grade} |`)
+    }
+
+    lines.push(``, `---`, ``, `## 这轮答得好的地方`, ``)
+    for (const s of result.strengths) {
+        lines.push(`- ${s}`)
+    }
+
+    lines.push(``, `## 下一轮优先补什么`, ``)
+    for (const a of result.nextActions) {
+        lines.push(`- ${a}`)
+    }
+
+    lines.push(``, `---`, ``, `## 逐题复盘`, ``)
+
+    for (let i = 0; i < result.questionResults.length; i++) {
+        const q = result.questionResults[i]
+        const verdictLabel = q.verdict === 'strong' ? '🟢 强' : q.verdict === 'solid' ? '🟡 中' : '🔴 弱'
+
+        lines.push(
+            `### ${i + 1}. ${q.prompt}`,
+            ``,
+            `**分类**：${q.category} · **得分**：${q.score} · **评级**：${verdictLabel}`,
+            ``,
+            `**我的回答**：`,
+            ``,
+            `> ${(q.answer || '（未作答）').split('\n').join('\n> ')}`,
+            ``,
+        )
+
+        if (q.strengths.length > 0) {
+            lines.push(`**做得好的地方**：`)
+            for (const s of q.strengths) lines.push(`- ${s}`)
+            lines.push(``)
+        }
+
+        if (q.improvements.length > 0) {
+            lines.push(`**还可以补强**：`)
+            for (const imp of q.improvements) lines.push(`- ${imp}`)
+            lines.push(``)
+        }
+
+        lines.push(`---`, ``)
+    }
+
+    return lines.join('\n')
+}
+
+function downloadMarkdown(filename: string, content: string) {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 }
 
 function ResultPanel({
@@ -177,6 +268,18 @@ function ResultPanel({
                     >
                         <RefreshCw className="h-4 w-4" />
                         {retryLabel}
+                    </button>
+                    <button
+                        onClick={() => {
+                            const now = new Date()
+                            const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+                            const md = buildReviewMarkdown(title, result)
+                            downloadMarkdown(`面试复盘-${ts}.md`, md)
+                        }}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm text-text-main transition-colors hover:border-white/20 hover:bg-white/5"
+                    >
+                        <Download className="h-4 w-4" />
+                        导出复盘报告
                     </button>
                     {extraAction}
                 </div>
