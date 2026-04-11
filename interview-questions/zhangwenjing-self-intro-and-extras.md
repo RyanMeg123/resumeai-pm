@@ -112,9 +112,17 @@
 
 **参考答案**：
 
-> **Cursor**。它不只是一个 AI 代码编辑器，而是"AI-first IDE"范式的定义者——Tab 补全 + inline edit + chat + agent 四种交互模式无缝切换。我自己用它写了 4 个项目的全部代码，最大的感受是**它改变了我的编程习惯**：我现在写代码的方式是"先写注释描述意图，再让 Cursor 填充实现"。这和我做 AI PM 的理念完全一致——让人负责"说清楚要什么"，让 AI 负责"怎么实现"。
+> 我说几个不同方向的，都是我真正用过的：
 >
-> 国内的话我关注 **Kimi（月之暗面）** 的长 context 能力——它在论文和长文档分析上的体验比 ChatGPT 好。还有 **Coze（字节）** 的 Bot 编排平台，低代码做 Agent 的思路很适合非技术用户。
+> **Perplexity Comet 浏览器**（2026.3 上线）—— 这不只是"搜索引擎加 AI"，是把 AI 做进了浏览器本身。你浏览任何网页时可以直接问 AI，Deep Research 能直接生成 PPT 和数据报表，而且它记住你的偏好帮你购物订票。这让我思考：**AI 的最终形态可能不是独立 App，而是一个环境层。**
+>
+> **Cursor / Claude Code** —— 我 4 个项目全部代码都是 Cursor 辅助写的。Agent 模式（描述需求 → 自主改多文件）改变了我的编程习惯：先写注释描述意图，再让 AI 填实现。Claude Code 更适合大规模推理和 GitHub 工作流。两个产品让我确信：**AI 最好的形态不是对话框，而是嵌入工作流。**
+>
+> **Lovable**（AI 全栈应用生成器）—— 一句话就能生成完整 React + Supabase 应用，代码同步 GitHub，支持登录/支付/数据库。2026.3 扩展到不只是建应用，还能做数据分析和 BI。这让"vibe coding"正在成为真正的生产力。
+>
+> **ElevenLabs** —— 语音克隆 + 多语言实时语音 Agent。这对我的项目2图像通道有启发——如果语音也能做到这个水平，运营内容的产能瓶颈就不再是"人"了。
+>
+> 国内的话我关注 **Kimi（月之暗面）** 的长 context 能力和 **Coze（字节）** 的 Bot 编排平台。
 
 ---
 
@@ -209,11 +217,11 @@
 
 **参考答案**：
 
-> 主力用 **Cursor**，试过 GitHub Copilot、Windsurf、Cline。
+> 主力用 **Cursor**，也在用 **Claude Code**（Anthropic 的终端 AI 编程工具），试过 GitHub Copilot、Windsurf、Cline。
 >
-> Cursor 的 Agent 模式（Cmd+I 描述需求，它自动改多个文件）是目前体验最好的。我 4 个项目里大约 60% 的代码是 Cursor 辅助写的，但**架构决策和 Prompt 设计全是我自己做的**——AI 写不好这些。
+> Cursor 的 Agent 模式（描述需求 → 自动改多个文件）是编辑器内体验最好的。Claude Code 更适合大规模项目——它直接在终端里运行，能做 git 操作、跑测试、推 PR，适合复杂的重构任务。另外最近 **Lovable** 类 vibe coding 工具也值得关注——一句话生成全栈应用的效率非常惊人。
 >
-> 最大的感受是：AI 编程工具让"实现"变便宜了，但让"设计"变得更重要了。你的架构想清楚了，AI 帮你 2 小时实现；想不清楚，AI 帮你 2 小时写一堆废代码。
+> 我 4 个项目里大约 60% 的代码是 AI 辅助写的，但**架构决策和 Prompt 设计全是我自己做的**——AI 写不好这些。最大的感受是：AI 编程工具让"实现"变便宜了，但让"设计"变得更重要了。
 
 ---
 
@@ -233,14 +241,14 @@
 
 **参考答案**：
 
-> 选型四象限：
+> 选型四象限（2026 最新模型）：
 >
 > | | 低成本敏感 | 高成本敏感 |
 > |---|---|---|
-> | **低定制需求** | 闭源 API（GPT-4o） | 开源小模型（Qwen2.5-7B） |
-> | **高定制需求** | 闭源 API + 长 Prompt | 开源 + 微调（Llama 3） |
+> | **低定制需求** | 闭源 API（GPT-5.4 / Claude Sonnet 4.6） | 开源小模型（Qwen3.5-7B / GLM-5） |
+> | **高定制需求** | 闭源 API + 长 Prompt | 开源 + 微调（DeepSeek-V3.2 / Qwen3.5） |
 >
-> 我的项目里 LLM 用的是 aihubmix（闭源 API），因为 MVP 阶段优先验证方向，成本 ≤ $20/天可控。但 V2 我计划评测开源模型做成本优化——特别是 Stage 1 意图解析这种简单任务，用 7B 模型就够了。
+> 2026 年最大的变化是 **DeepSeek-V3.2 把开源模型的性价比拉到了极致**——$0.28/百万 token，接近 GPT-5.4 的 1/18。我的项目里 LLM 用的是 aihubmix（闭源 API），因为 MVP 阶段优先验证方向。但 V2 我计划评测 DeepSeek-V3.2 和 Qwen3.5 做成本优化——特别是 Stage 1 意图解析这种简单任务，用小模型就够了。
 >
 > LoRA 训练我用的是开源栈（SDXL + kohya_ss），因为画风定制必须微调，闭源 API 做不到。
 
@@ -330,10 +338,11 @@
 
 **参考答案**：
 
-> 三个方向：
-> 1. **MCP（Model Context Protocol）**：Anthropic 提出的让 AI 连接外部工具的协议。我在想能不能用 MCP 把项目3 对话 BI 做成一个标准的 data source connector。
-> 2. **SDXL Turbo / Lightning**：4 步出图，能把项目2 的 ComfyUI 推理从 3-8 分钟压到几十秒。
-> 3. **Structured Outputs**：OpenAI 和 Anthropic 都在强化结构化输出能力。这对我的"两阶段架构"是利好——Intent JSON 输出的可靠性会进一步提升。
+> 四个方向：
+> 1. **MCP（Model Context Protocol）**：Anthropic 提出的让 AI 连接外部工具的标准协议，现在已经被 Cursor、Claude Code、Perplexity 等主流产品采用。我在想能不能用 MCP 把项目3 对话 BI 做成一个标准的 data source connector。
+> 2. **Claude Code + Agent SDK**：Anthropic 的终端编程工具和 Agent 开发框架。Agent SDK 让你能构建自定义的 AI Agent，比我之前用的固定 Workflow 灵活很多。
+> 3. **SDXL Turbo / Lightning**：4 步出图，能把项目2 的 ComfyUI 推理从 3-8 分钟压到几十秒。
+> 4. **DeepSeek-V3.2 / V4 评测**：V3.2 开源模型的性价比已经是碾压级别的（$0.28/百万 token），V4 即将发布。这对我的项目做成本优化有直接价值。
 
 ---
 
@@ -353,11 +362,32 @@
 
 **参考答案**：
 
-> - **Twitter/X**：@karpathy（前 Tesla AI 总监，AI 教育内容最好的）、@swyx（AI 工程趋势）、@DrJimFan（Nvidia 多模态研究）
-> - **播客**：Latent Space（AI 工程深度对话）、硅谷101（中文 AI 行业分析）
-> - **Newsletter**：The Batch（吴恩达）、TLDR AI
-> - **社区**：HuggingFace（开源模型动态）、Civitai（SDXL/LoRA 社区）、ComfyUI Reddit
-> - **实操**：我自己每周至少花 2 小时试新工具——最近在试 Claude Code 和 Devin。
+> 我的信息获取分四层，从"快"到"深"：
+>
+> **每日快扫（10 分钟）：**
+> - **The Rundown AI**（newsletter，200 万+ 订阅）—— 每天 5 分钟看完 AI 行业大事
+> - **TLDR AI**（newsletter，50 万+ 订阅）—— 偏技术向，适合了解论文和开源动态
+> - **Twitter/X**：@karpathy（AI 教育内容最好的）、@swyx（AI 工程趋势）、@DrJimFan（Nvidia 多模态）、@simonw（AI 工程实操）
+>
+> **每周深读（1~2 小时）：**
+> - **Latent Space 播客** —— AI 工程师视角的深度对话
+> - **Hard Fork（NYT）** —— Kevin Roose 和 Casey Newton 的 AI 周报，适合理解行业叙事
+> - **The Cognitive Revolution** —— Nathan Labenz 的长对话，适合听 AI 产品的深度分析
+> - **硅谷101** —— 中文 AI 行业分析
+> - **机器之心 / 量子位** —— 国内 AI 深度报道
+>
+> **产品体验（持续）：**
+> - **Product Hunt AI 分类** —— 每周翻一次，看最新上线的 AI 产品
+> - **GitHub Trending** —— 看开源社区在做什么
+> - **HuggingFace** —— 开源模型动态
+> - **Civitai** —— SDXL/LoRA 社区（和我项目2图像通道直接相关）
+> - **Ben's Bites** —— 偏商业视角的 AI 创业方向
+>
+> **模型动态：**
+> - **Artificial Analysis**（artificialanalysis.ai）—— 模型性能/价格对比的权威排行榜
+> - 各大模型的 changelog：Claude/GPT/Gemini/DeepSeek 的更新日志
+>
+> **实操**：每周至少花 2 小时试新工具——最近在密集用 Claude Code 做项目、Perplexity Comet 做调研。
 
 ---
 

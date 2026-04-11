@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 import { ProjectPracticeClient } from '@/components/ProjectPracticeClient'
-import { loadProjectQuestionBank } from '@/lib/project-question-bank'
+import { loadInterviewGuides, loadProjectQuestionBank } from '@/lib/project-question-bank'
 
 export const metadata: Metadata = {
     title: '文婧项目深挖',
@@ -9,13 +9,17 @@ export const metadata: Metadata = {
 }
 
 export default async function WenjingProjectPage() {
-    const allSets = await loadProjectQuestionBank()
+    const [allSets, guides] = await Promise.all([
+        loadProjectQuestionBank(),
+        loadInterviewGuides('张文婧'),
+    ])
     const wenjingSets = allSets.filter((set) => set.person === '张文婧')
 
     return (
         <ProjectPracticeClient
             personName="文婧"
             projectQuestionSets={wenjingSets}
+            guides={guides}
         />
     )
 }

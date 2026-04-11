@@ -189,13 +189,22 @@ export async function loadProjectQuestionBank(): Promise<ProjectQuestionSet[]> {
             name.startsWith('eziting-') &&
             name.endsWith('.md') &&
             !name.endsWith('-answers.md') &&
-            !name.startsWith('eziting-self-intro') &&
-            !name.startsWith('eziting-divergent') &&
             !name.startsWith('eziting-ask-interviewer'),
     )
 
-    const zhangwenjingFiles = filenames.filter(
-        (name) => name.startsWith('zhangwenjing-') && name.endsWith('.md'),
+    const zhangwenjingProjectFiles = filenames.filter(
+        (name) =>
+            name.startsWith('zhangwenjing-project') &&
+            name.endsWith('.md'),
+    )
+
+    const zhangwenjingExtraQuestionFiles = filenames.filter(
+        (name) =>
+            name.startsWith('zhangwenjing-') &&
+            name.endsWith('.md') &&
+            !name.endsWith('-answers.md') &&
+            !name.startsWith('zhangwenjing-project') &&
+            !name.startsWith('zhangwenjing-self-intro-and-extras'),
     )
 
     const sets: ProjectQuestionSet[] = []
@@ -233,7 +242,7 @@ export async function loadProjectQuestionBank(): Promise<ProjectQuestionSet[]> {
         })
     }
 
-    for (const file of zhangwenjingFiles) {
+    for (const file of zhangwenjingProjectFiles) {
         const baseId = file.replace(/\.md$/, '')
         const markdown = await readFile(path.join(dirPath, file), 'utf-8')
         const { person, project } = parseZhangwenjingTitle(markdown)
@@ -252,25 +261,119 @@ export async function loadProjectQuestionBank(): Promise<ProjectQuestionSet[]> {
         })
     }
 
+    for (const questionFile of zhangwenjingExtraQuestionFiles) {
+        const baseId = deriveSetId(questionFile)
+        const answersFile = `${baseId}-answers.md`
+
+        const questionMarkdown = await readFile(
+            path.join(dirPath, questionFile),
+            'utf-8',
+        )
+
+        const titleMatch = questionMarkdown.match(/^#\s+张文婧\s*-\s*(.+?)\s*项目面试题/m)
+        const project = titleMatch ? titleMatch[1].trim() : questionFile.replace(/\.md$/, '')
+        const questions = parseQuestions(questionMarkdown)
+
+        if (questions.length === 0) {
+            continue
+        }
+
+        let referenceAnswers: Record<string, string> = {}
+        if (filenames.includes(answersFile)) {
+            const answersMarkdown = await readFile(
+                path.join(dirPath, answersFile),
+                'utf-8',
+            )
+            referenceAnswers = parseAnswers(answersMarkdown)
+        }
+
+        sets.push({
+            id: baseId,
+            person: '张文婧',
+            project,
+            questions,
+            referenceAnswers,
+        })
+    }
+
     cachedSets = sets
     return cachedSets
 }
 
-const GUIDE_FILES: Record<string, { filename: string; title: string }> = {
-    'self-intro': { filename: 'eziting-self-intro.md', title: '自我介绍' },
-    'divergent': { filename: 'eziting-divergent.md', title: '发散性问题' },
+interface GuideFileConfig {
+    filename: string
+    title: string
+}
+
+interface CombinedGuideConfig {
+    filename: string
+    sections: Array<{ id: string; title: string; marker: string }>
+}
+
+const EZITING_GUIDE_FILES: Record<string, GuideFileConfig> = {
     'ask-interviewer': { filename: 'eziting-ask-interviewer.md', title: '反问面试官' },
+}
+
+const ZHANGWENJING_COMBINED: CombinedGuideConfig = {
+    filename: 'zhangwenjing-self-intro-and-extras.md',
+    sections: [
+        { id: 'ask-interviewer', title: '反问面试官', marker: '# 第三部分' },
+    ],
+}
+
+function splitCombinedGuide(
+    content: string,
+    sections: CombinedGuideConfig['sections'],
+): InterviewGuide[] {
+    const guides: InterviewGuide[] = []
+    const lines = content.split('\n')
+
+    for (let i = 0; i < sections.length; i += 1) {
+        const current = sections[i]
+        const next = sections[i + 1]
+
+        const startIdx = lines.findIndex((line) => line.startsWith(current.marker))
+        if (startIdx < 0) {
+            continue
+        }
+
+        const endIdx = next
+            ? lines.findIndex((line, idx) => idx > startIdx && line.startsWith(next.marker))
+            : lines.length
+
+        const body = lines
+            .slice(startIdx + 1, endIdx > startIdx ? endIdx : lines.length)
+            .join('\n')
+            .trim()
+
+        if (body) {
+            guides.push({ id: current.id, title: current.title, content: body })
+        }
+    }
+
+    return guides
 }
 
 export async function loadInterviewGuides(
     person: string,
 ): Promise<InterviewGuide[]> {
     const dirPath = path.join(process.cwd(), 'interview-questions')
-    const prefix = person === '鄂子婷' ? 'eziting' : person
+
+    if (person === '张文婧') {
+        try {
+            const content = await readFile(
+                path.join(dirPath, ZHANGWENJING_COMBINED.filename),
+                'utf-8',
+            )
+            return splitCombinedGuide(content, ZHANGWENJING_COMBINED.sections)
+        } catch {
+            return []
+        }
+    }
 
     const guides: InterviewGuide[] = []
 
-    for (const [id, config] of Object.entries(GUIDE_FILES)) {
+    for (const [id, config] of Object.entries(EZITING_GUIDE_FILES)) {
         const filePath = path.join(dirPath, config.filename)
         try {
             const content = await readFile(filePath, 'utf-8')
