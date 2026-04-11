@@ -727,6 +727,13 @@ export function InterviewPracticeClient({
                         <FolderKanban className="h-4 w-4" />
                         子婷项目深挖
                     </Link>
+                    <Link
+                        href="/project/wenjing"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
+                    >
+                        <FolderKanban className="h-4 w-4" />
+                        文婧项目深挖
+                    </Link>
                 </div>
 
                 {activeMode === 'marathon' ? (

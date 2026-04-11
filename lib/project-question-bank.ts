@@ -81,6 +81,90 @@ function parseAnswers(markdown: string): Record<string, string> {
     return answers
 }
 
+function parseZhangwenjingTitle(markdown: string): { person: string; project: string } {
+    const match = markdown.match(/^#\s+张文婧\s*·\s*项目面试题\s*·\s*(.+)$/m)
+    if (match) {
+        return { person: '张文婧', project: match[1].trim() }
+    }
+    return { person: '张文婧', project: '未知' }
+}
+
+function parseZhangwenjingQuestions(markdown: string): {
+    questions: InterviewQuestion[]
+    referenceAnswers: Record<string, string>
+} {
+    const questions: InterviewQuestion[] = []
+    const referenceAnswers: Record<string, string> = {}
+
+    const sections = markdown.split(/^### Q(\d+)\.\s*/m)
+
+    let currentCategory = '未分类'
+    const categoryPattern = /^##\s+\d+\.\s+(.+)$/gm
+    const categoryPositions: Array<{ category: string; position: number }> = []
+    let catMatch: RegExpExecArray | null
+    while ((catMatch = categoryPattern.exec(markdown)) !== null) {
+        categoryPositions.push({ category: catMatch[1].trim(), position: catMatch.index })
+    }
+
+    for (let i = 1; i < sections.length; i += 2) {
+        const index = Number(sections[i])
+        const content = sections[i + 1]
+
+        if (!Number.isFinite(index) || !content) {
+            continue
+        }
+
+        const questionPosition = markdown.indexOf(`### Q${index}.`)
+        for (const cp of categoryPositions) {
+            if (cp.position < questionPosition) {
+                currentCategory = cp.category
+            }
+        }
+
+        const promptMatch = content.match(/^(.+?)(?:\n|$)/)
+        const prompt = promptMatch ? promptMatch[1].trim() : ''
+
+        if (!prompt) {
+            continue
+        }
+
+        const intentMatch = content.match(/\*\*面试官意图\*\*[：:]\s*(.+?)(?:\n|$)/)
+        const interviewerIntent = intentMatch ? intentMatch[1].trim() : undefined
+
+        const followUpMatch = content.match(/\*\*可能追问\*\*[：:]\s*(.+?)(?:\n|$)/)
+        const followUp = followUpMatch ? followUpMatch[1].trim() : undefined
+
+        const answerMatch = content.match(/\*\*参考答案\*\*[：:]\s*\n([\s\S]*?)(?=\n\*\*可能追问\*\*|\n---|\n### Q|$)/)
+        let referenceAnswer: string | undefined
+        if (answerMatch) {
+            referenceAnswer = answerMatch[1]
+                .replace(/^>\s?/gm, '')
+                .trim()
+        }
+
+        const questionId = `proj-q-${index}`
+        questions.push({
+            id: questionId,
+            index,
+            category: currentCategory,
+            prompt,
+            interviewerIntent,
+            followUp,
+            referenceAnswer,
+            bank: 'project-deep-dive',
+        })
+
+        if (referenceAnswer) {
+            referenceAnswers[questionId] = referenceAnswer
+        }
+    }
+
+    return {
+        questions: questions.sort((a, b) => a.index - b.index),
+        referenceAnswers,
+    }
+}
+
 function deriveSetId(filename: string): string {
     return filename.replace(/\.md$/, '').replace(/-answers$/, '')
 }
@@ -100,13 +184,23 @@ export async function loadProjectQuestionBank(): Promise<ProjectQuestionSet[]> {
         return cachedSets
     }
 
-    const questionFiles = filenames.filter(
-        (name) => name.endsWith('.md') && !name.endsWith('-answers.md'),
+    const ezitingQuestionFiles = filenames.filter(
+        (name) =>
+            name.startsWith('eziting-') &&
+            name.endsWith('.md') &&
+            !name.endsWith('-answers.md') &&
+            !name.startsWith('eziting-self-intro') &&
+            !name.startsWith('eziting-divergent') &&
+            !name.startsWith('eziting-ask-interviewer'),
+    )
+
+    const zhangwenjingFiles = filenames.filter(
+        (name) => name.startsWith('zhangwenjing-') && name.endsWith('.md'),
     )
 
     const sets: ProjectQuestionSet[] = []
 
-    for (const questionFile of questionFiles) {
+    for (const questionFile of ezitingQuestionFiles) {
         const baseId = deriveSetId(questionFile)
         const answersFile = `${baseId}-answers.md`
 
@@ -128,6 +222,25 @@ export async function loadProjectQuestionBank(): Promise<ProjectQuestionSet[]> {
                 'utf-8',
             )
             referenceAnswers = parseAnswers(answersMarkdown)
+        }
+
+        sets.push({
+            id: baseId,
+            person,
+            project,
+            questions,
+            referenceAnswers,
+        })
+    }
+
+    for (const file of zhangwenjingFiles) {
+        const baseId = file.replace(/\.md$/, '')
+        const markdown = await readFile(path.join(dirPath, file), 'utf-8')
+        const { person, project } = parseZhangwenjingTitle(markdown)
+        const { questions, referenceAnswers } = parseZhangwenjingQuestions(markdown)
+
+        if (questions.length === 0) {
+            continue
         }
 
         sets.push({

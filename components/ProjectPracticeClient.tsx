@@ -669,6 +669,12 @@ export function ProjectPracticeClient({
                                 <p className="text-lg leading-8 text-text-main">
                                     {currentQuestion.prompt}
                                 </p>
+                                {currentQuestion.interviewerIntent && (
+                                    <div className="mt-3 rounded-2xl border border-warning/20 bg-warning/5 px-4 py-2.5 text-sm text-warning/80">
+                                        <span className="font-medium">面试官意图：</span>
+                                        {currentQuestion.interviewerIntent}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-5">
@@ -724,6 +730,12 @@ export function ProjectPracticeClient({
                                                 ),
                                             }}
                                         />
+                                    )}
+                                    {expandedAnswerId === currentQuestion.id && currentQuestion.followUp && (
+                                        <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-text-muted">
+                                            <span className="font-medium text-text-main">可能追问：</span>
+                                            {currentQuestion.followUp}
+                                        </div>
                                     )}
                                 </div>
                             )}
