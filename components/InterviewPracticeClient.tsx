@@ -633,6 +633,14 @@ export function InterviewPracticeClient({
                             先把 {totalQuestionsCountLabel}
                             高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
                         </p>
+                        <div className="mt-4">
+                            <Link
+                                href="/zhangwenjing-project"
+                                className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
+                            >
+                                去张文婧项目深挖单页
+                            </Link>
+                        </div>
                     </div>
                     <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur md:block">
                         <div className="text-xs uppercase tracking-[0.28em] text-text-muted">

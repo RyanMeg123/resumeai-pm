@@ -3,6 +3,20 @@ export interface InterviewQuestion {
     index: number
     category: string
     prompt: string
+    interviewerIntent?: string
+    referenceAnswer?: string
+    followUp?: string
+    bank?: 'general' | 'project-deep-dive'
+}
+
+export interface ProjectDeepDiveBank {
+    slug: string
+    fileName: string
+    title: string
+    shortTitle: string
+    summary: string
+    questionCount: number
+    questions: InterviewQuestion[]
 }
 
 export interface InterviewAnswerInput {
