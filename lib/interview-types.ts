@@ -51,3 +51,17 @@ export interface InterviewEvaluation {
     categoryScores: InterviewCategoryScore[]
     questionResults: InterviewQuestionResult[]
 }
+
+export interface ProjectQuestionSet {
+    id: string
+    person: string
+    project: string
+    questions: InterviewQuestion[]
+    referenceAnswers: Record<string, string>
+}
+
+export interface InterviewGuide {
+    id: string
+    title: string
+    content: string
+}

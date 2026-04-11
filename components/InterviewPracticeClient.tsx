@@ -7,6 +7,7 @@ import {
     Brain,
     Clock3,
     FileCheck2,
+    FolderKanban,
     Gauge,
     LibraryBig,
     ListChecks,
@@ -30,6 +31,7 @@ import { ResumeInterviewProfile, RESUME_INTERVIEW_PROFILE_STORAGE_KEY } from '@/
 type PracticeMode = 'marathon' | 'mock' | 'cards' | 'resume'
 
 const MARATHON_COMPLETED_STORAGE_KEY = 'resumeai-pm-marathon-completed'
+
 
 function shuffle<T>(items: T[]) {
     const copy = [...items]
@@ -715,6 +717,16 @@ export function InterviewPracticeClient({
                         )}
                         抽卡式答题
                     </button>
+
+                    <span className="mx-1 hidden self-center text-white/20 sm:inline">|</span>
+
+                    <Link
+                        href="/project/ziting"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
+                    >
+                        <FolderKanban className="h-4 w-4" />
+                        子婷项目深挖
+                    </Link>
                 </div>
 
                 {activeMode === 'marathon' ? (
