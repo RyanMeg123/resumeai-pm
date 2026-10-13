@@ -460,7 +460,7 @@ export function ProjectPracticeClient({
     }
 
     return (
-        <main className="min-h-dvh bg-bg-main px-4 py-12 text-text-main sm:px-6 lg:py-20">
+        <main className="min-h-dvh bg-bg-main px-4 py-6 text-text-main sm:px-6 md:py-12 lg:py-20">
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -512,7 +512,7 @@ export function ProjectPracticeClient({
                 </div>
 
                 {activeTopTab !== 'projects' && guidesMap[activeTopTab] ? (
-                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                         <div
                             className="prose prose-invert prose-sm max-w-none leading-7 text-text-main/90 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-lg [&_h3]:font-medium [&_h4]:mt-4 [&_h4]:mb-2 [&_h4]:font-medium [&_p]:mb-3 [&_hr]:my-8 [&_hr]:border-white/10 [&_ul]:space-y-1 [&_ol]:space-y-1 [&_li]:text-text-main/80 [&_strong]:text-text-main [&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5 [&_blockquote]:rounded-2xl [&_blockquote]:px-5 [&_blockquote]:py-3 [&_blockquote]:not-italic [&_blockquote]:text-text-muted"
                             dangerouslySetInnerHTML={{
@@ -546,7 +546,7 @@ export function ProjectPracticeClient({
 
                 {sessionQuestions.length === 0 && !result ? (
                     <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                             <div className="flex items-center gap-3 text-primary">
                                 <FolderKanban className="h-5 w-5" />
                                 <span className="text-sm font-medium">
@@ -654,7 +654,7 @@ export function ProjectPracticeClient({
                     />
                 ) : currentQuestion ? (
                     <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-                        <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                        <aside className="order-last rounded-[30px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:p-5 lg:order-none">
                             <div className="flex items-center gap-3 text-sm text-text-muted">
                                 <Clock3 className="h-4 w-4" />
                                 已用时 {formatDuration(elapsedSeconds)}
@@ -702,7 +702,7 @@ export function ProjectPracticeClient({
                             </div>
                         </aside>
 
-                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                        <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
                                     <div className="text-sm text-primary">
@@ -746,7 +746,7 @@ export function ProjectPracticeClient({
                                         }))
                                     }
                                     placeholder="尽量把场景、判断、动作、结果讲完整，就像在真实面试中回答一样。"
-                                    className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                    className="min-h-[200px] md:min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                 />
                                 <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} projectSetId={selectedProjectSet.id} />
                             </div>

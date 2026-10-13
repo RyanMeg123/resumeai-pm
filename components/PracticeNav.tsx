@@ -9,15 +9,16 @@ const SOURCES: Array<{ label: string; hint: string; modes: Array<{ mode: Practic
     { label: '我的题', hint: '基于当前账号的简历和项目', modes: [{ mode: 'resume', label: '简历定向题' }, { mode: 'mock', label: '模拟面试' }] },
 ]
 
-const pill = (active: boolean) => `inline-flex items-center rounded-full border px-5 py-2.5 text-sm font-medium transition-colors ${active ? 'border-primary bg-primary/10 text-text-main' : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'}`
+const tone = (active: boolean) => `border text-sm font-medium transition-colors ${active ? 'border-primary bg-primary/10 text-text-main' : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'}`
+const pill = (active: boolean) => `inline-flex items-center rounded-full px-4 py-2.5 sm:px-5 ${tone(active)}`
 
 export function PracticeNav({ activeMode, onChange, loggedIn }: { activeMode: PracticeMode; onChange: (mode: PracticeMode) => void; loggedIn: boolean }) {
     const source = SOURCES.find((item) => item.modes.some((entry) => entry.mode === activeMode)) ?? SOURCES[0]
-    return <nav aria-label="练习导航" className="mb-8 space-y-4">
-        <div role="tablist" aria-label="题源" className="flex flex-wrap gap-3">
-            {SOURCES.map((item) => <button key={item.label} role="tab" aria-selected={item === source} onClick={() => onChange(item.modes[0].mode)} className={`${pill(item === source)} flex-col items-start gap-0.5 rounded-2xl`}>
+    return <nav aria-label="练习导航" className="mb-6 space-y-3 md:mb-8 md:space-y-4">
+        <div role="tablist" aria-label="题源" className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            {SOURCES.map((item) => <button key={item.label} role="tab" aria-selected={item === source} onClick={() => onChange(item.modes[0].mode)} className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-2.5 sm:items-start sm:px-5 ${tone(item === source)}`}>
                 <span>{item.label}</span>
-                <span className="text-xs font-normal text-text-muted">{item.hint}</span>
+                <span className="hidden text-xs font-normal text-text-muted sm:block">{item.hint}</span>
             </button>)}
         </div>
         {(source.modes.length > 1 || source.label === '我的题') && <div aria-label="练法" className="flex flex-wrap items-center gap-2">

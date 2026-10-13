@@ -113,13 +113,13 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
 
     return (
         <section className="space-y-6" aria-label="大厂面经练习">
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6">
+            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-xl font-semibold">大厂面经练习</h2>
                     <span className="text-sm text-text-muted">{banks.length} 家公司 · {total} 条面经题</span>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-text-muted">按公司和面经段落练习，回答自动保存在本机。材料为社区面经转述，包含重复考点和追问。</p>
-                <div className="mt-5 flex flex-wrap gap-3" aria-label="选择公司">
+                <p className="mt-2 hidden text-sm leading-6 text-text-muted md:block">按公司和面经段落练习，回答自动保存在本机。材料为社区面经转述，包含重复考点和追问。</p>
+                <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 md:mt-5 md:flex-wrap md:gap-3 md:overflow-visible" aria-label="选择公司">
                     {banks.map((item) => (
                         <button key={item.slug} disabled={submitting}
                             aria-pressed={item.slug === bank.slug}
@@ -127,12 +127,12 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
                                 setDraft((current) => ({ ...current, companySlug: item.slug }))
                                 setResult(null); setError('')
                             }}
-                            className={`rounded-full border px-5 py-3 text-sm font-medium transition-colors disabled:opacity-60 ${item.slug === bank.slug ? 'border-primary bg-primary/10 text-text-main' : 'border-white/10 text-text-muted hover:border-white/30'}`}
+                            className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 md:px-5 md:py-3 ${item.slug === bank.slug ? 'border-primary bg-primary/10 text-text-main' : 'border-white/10 text-text-muted hover:border-white/30'}`}
                         >{item.title} · {item.questionCount} 题</button>
                     ))}
                 </div>
-                <div className="mt-5 flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-3 text-sm text-text-muted">
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 md:mt-5">
+                    <label className="flex min-w-0 max-w-full items-center gap-3 text-sm text-text-muted">
                         面经段落
                         <select aria-label="面经段落" value={sessionId} disabled={submitting}
                             onChange={(event) => {
@@ -151,7 +151,7 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
 
             {question ? (
                 <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-                    <aside className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+                    <aside className="order-last rounded-[28px] border border-white/10 bg-white/[0.04] p-4 lg:order-none">
                         <h3 className="mb-3 font-medium">{bank.title}题目</h3>
                         <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
                             {questions.map((item, index) => (
@@ -164,7 +164,7 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
                             ))}
                         </div>
                     </aside>
-                    <div className="min-w-0 rounded-[32px] border border-white/10 bg-white/[0.04] p-6">
+                    <div className="min-w-0 rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6">
                         <p className="text-sm text-primary">{bank.title} · {session?.label} · {question.category}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-3">
                             <h3 className="text-2xl font-semibold">第 {currentIndex + 1} / {questions.length} 题</h3>
@@ -184,7 +184,7 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
                                 setResult(null)
                             }}
                             placeholder="结合你的项目，说明场景、判断依据、方案和验证结果。"
-                            className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 outline-none placeholder:text-text-muted/70 focus:border-primary disabled:opacity-60" />
+                            className="min-h-[200px] md:min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 outline-none placeholder:text-text-muted/70 focus:border-primary disabled:opacity-60" />
                                 <AIQuestionHelp key={question.id} question={question} answer={draft.answers[question.id] || ''} companySlug={bank.slug} />
                         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <span className="text-sm text-text-muted">当前字数：{(draft.answers[question.id] ?? '').replace(/\s+/g, '').length}</span>
@@ -204,14 +204,14 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
 
             {result && (
                 <section className="space-y-4" aria-label="公司面经评分结果">
-                    <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
+                    <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-6">
                         <h3 className="text-xl font-semibold">{bank.title}面经练习反馈</h3>
                         <p className="mt-3 text-4xl font-semibold">{result.overallScore}<span className="ml-2 text-sm text-text-muted">分 · 本次评价 {result.totalQuestions} 题</span></p>
                         <p className="mt-3 text-xs text-text-muted">评分按回答结构和要点覆盖提供练习反馈，供复盘参考。</p>
                         <div className="mt-4 flex flex-wrap gap-3">{result.categoryScores.map((item) => <span key={item.category} className="rounded-xl border border-white/10 px-3 py-2 text-sm">{item.category} · {item.score} 分</span>)}</div>
                     </div>
                     {result.questionResults.map((item) => (
-                        <article key={item.questionId} className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
+                        <article key={item.questionId} className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-6">
                             <h4 className="text-lg font-medium">{item.prompt}</h4>
                         <AIQuestionHelp question={{ id: item.questionId, index: 1, prompt: item.prompt, category: item.category }} answer={item.answer} companySlug={bank.slug} showMethod={false} />
                             <p className="mt-2 text-sm text-primary">{item.score} 分</p>

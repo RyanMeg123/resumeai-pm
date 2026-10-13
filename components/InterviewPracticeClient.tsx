@@ -729,8 +729,8 @@ export function InterviewPracticeClient({
 
     return (
         <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(77,126,255,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(52,211,153,0.14),_transparent_28%),linear-gradient(180deg,_#0E0F14_0%,_#090A0E_100%)] text-text-main">
-            <div className="mx-auto max-w-7xl px-6 py-8 md:px-10">
-                <div className="mb-8 flex items-center justify-between gap-4">
+            <div className="mx-auto max-w-7xl px-4 py-6 md:px-10 md:py-8">
+                <div className="mb-6 flex items-center justify-between gap-4 md:mb-8">
                     <div>
                         <Link
                             href="/resume"
@@ -739,10 +739,10 @@ export function InterviewPracticeClient({
                             <ArrowLeft className="h-4 w-4" />
                             去简历打磨
                         </Link>
-                        <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
+                        <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">
                             AI 产品经理面试练习场
                         </h1>
-                        <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted md:text-base">
+                        <p className="mt-3 hidden max-w-3xl text-sm leading-7 text-text-muted md:block md:text-base">
                             先选题源再选练法：基础题库打底，大厂面经练真题，我的题按你的简历深挖。每次交卷后都有总分、模块分和逐题反馈。
                         </p>
 
@@ -765,7 +765,7 @@ export function InterviewPracticeClient({
                     <>
                         {!marathonStartedAt && !marathonResult ? (
                             <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                     <div className="flex items-center gap-3 text-primary">
                                         <LibraryBig className="h-5 w-5" />
                                         <span className="text-sm font-medium">
@@ -892,7 +892,7 @@ export function InterviewPracticeClient({
                                         </div>
                                     </div>
 
-                                    <div className="mt-5 flex flex-wrap gap-2">
+                                    <div className="-mx-1 mt-5 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
                                         {groupedQuestions.map((group) => {
                                             const groupAnswered = countAnswered(
                                                 group.questions,
@@ -907,7 +907,7 @@ export function InterviewPracticeClient({
                                                             group.category,
                                                         )
                                                     }
-                                                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                                                    className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm transition-colors ${
                                                         activeMarathonGroup?.category ===
                                                         group.category
                                                             ? 'border-primary bg-primary/10 text-text-main'
@@ -926,7 +926,7 @@ export function InterviewPracticeClient({
                                     <div className="space-y-6">
                                         <section
                                             key={activeMarathonGroup.category}
-                                            className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur"
+                                            className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur"
                                         >
                                             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                                                 <div>
@@ -936,7 +936,7 @@ export function InterviewPracticeClient({
                                                     <h2 className="mt-2 text-2xl font-semibold">
                                                         {activeMarathonGroup.category}
                                                     </h2>
-                                                    <p className="mt-2 text-sm leading-7 text-text-muted">
+                                                    <p className="mt-2 hidden text-sm leading-7 text-text-muted md:block">
                                                         现在只展示这个模块的题。切到别的 tab 才会看见别的模块。
                                                     </p>
                                                 </div>
@@ -1107,7 +1107,7 @@ export function InterviewPracticeClient({
                     <>
                         {sessionQuestions.length === 0 ? (
                             <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                     <div className="flex items-center gap-3 text-primary">
                                         <Brain className="h-5 w-5" />
                                         <span className="text-sm font-medium">
@@ -1192,7 +1192,7 @@ export function InterviewPracticeClient({
                             </section>
                         ) : (
                             <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-                                <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                <aside className="order-last rounded-[30px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:p-5 lg:order-none">
                                     <div className="flex items-center gap-3 text-sm text-text-muted">
                                         <Clock3 className="h-4 w-4" />
                                         已用时 {formatDuration(elapsedSeconds)}
@@ -1248,7 +1248,7 @@ export function InterviewPracticeClient({
                                     </div>
                                 </aside>
 
-                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                     <div className="flex flex-wrap items-center justify-between gap-4">
                                         <div>
                                             <div className="text-sm text-primary">
@@ -1287,7 +1287,7 @@ export function InterviewPracticeClient({
                                                 }))
                                             }
                                             placeholder="把它当作正式面试来答。先讲结论，再展开背景、动作、结果和取舍。"
-                                            className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                            className="min-h-[200px] md:min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                         />
                                 <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                     </div>
@@ -1375,7 +1375,7 @@ export function InterviewPracticeClient({
                         <>
                             {sessionQuestions.length === 0 ? (
                                 <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                         <div className="flex items-center gap-3 text-primary">
                                             <FileCheck2 className="h-5 w-5" />
                                             <span className="text-sm font-medium">
@@ -1460,7 +1460,7 @@ export function InterviewPracticeClient({
                                 </section>
                             ) : (
                                 <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-                                    <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                    <aside className="order-last rounded-[30px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:p-5 lg:order-none">
                                         <div className="flex items-center gap-3 text-sm text-text-muted">
                                             <Clock3 className="h-4 w-4" />
                                             已用时 {formatDuration(elapsedSeconds)}
@@ -1516,7 +1516,7 @@ export function InterviewPracticeClient({
                                         </div>
                                     </aside>
 
-                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                    <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                         <div className="flex flex-wrap items-center justify-between gap-4">
                                             <div>
                                                 <div className="text-sm text-primary">
@@ -1555,7 +1555,7 @@ export function InterviewPracticeClient({
                                                     }))
                                                 }
                                                 placeholder="这轮建议你更像正式面试那样答，尽量把场景、判断、动作、结果讲完整。"
-                                                className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                                className="min-h-[200px] md:min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                             />
                                 <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                         </div>
@@ -1625,7 +1625,7 @@ export function InterviewPracticeClient({
                             )}
                         </>
                     ) : (
-                        <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                        <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                             <div className="flex items-center gap-3 text-warning">
                                 <LockKeyhole className="h-5 w-5" />
                                 <span className="text-sm font-medium">
@@ -1652,7 +1652,7 @@ export function InterviewPracticeClient({
                     <>
                         {sessionQuestions.length === 0 ? (
                             <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                     <div className="flex items-center gap-3 text-primary">
                                         <Sparkles className="h-5 w-5" />
                                         <span className="text-sm font-medium">
@@ -1803,7 +1803,7 @@ export function InterviewPracticeClient({
                             </section>
                         ) : (
                             <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-                                <aside className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                                <aside className="order-last rounded-[30px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:p-5 lg:order-none">
                                     <div className="flex items-center gap-3 text-sm text-text-muted">
                                         <Clock3 className="h-4 w-4" />
                                         已用时 {formatDuration(elapsedSeconds)}
@@ -1856,7 +1856,7 @@ export function InterviewPracticeClient({
                                     </div>
                                 </aside>
 
-                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
+                                <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-4 md:p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
                                     <div className="flex flex-wrap items-center justify-between gap-4">
                                         <div>
                                             <div className="text-sm text-primary">
@@ -1895,7 +1895,7 @@ export function InterviewPracticeClient({
                                                 }))
                                             }
                                             placeholder="建议按“场景/判断/方案/结果”来答。不是每题都要很长，但别只写一句话。"
-                                            className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
+                                            className="min-h-[200px] md:min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                         />
                                 <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                     </div>
