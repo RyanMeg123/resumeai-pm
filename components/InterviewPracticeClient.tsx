@@ -11,7 +11,6 @@ import {
     Clock3,
     Download,
     FileCheck2,
-    FolderKanban,
     Gauge,
     LibraryBig,
     ListChecks,
@@ -28,13 +27,13 @@ import {
     CompanyInterviewBank,
 } from '@/lib/interview-types'
 import { CompanyInterviewPractice } from '@/components/CompanyInterviewPractice'
+import { PracticeNav, type PracticeMode } from '@/components/PracticeNav'
 import {
     generateMockInterviewQuestion,
     generateResumeInterviewQuestions,
 } from '@/lib/gemini'
 import { ResumeInterviewProfile, RESUME_INTERVIEW_PROFILE_STORAGE_KEY } from '@/lib/interview-profile'
 
-type PracticeMode = 'marathon' | 'mock' | 'cards' | 'resume' | 'company'
 
 const MARATHON_COMPLETED_STORAGE_KEY = 'resumeai-pm-marathon-completed'
 
@@ -744,8 +743,7 @@ export function InterviewPracticeClient({
                             AI 产品经理面试练习场
                         </h1>
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted md:text-base">
-                            先把 {totalQuestionsCountLabel}
-                            高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
+                            先选题源再选练法：基础题库打底，大厂面经练真题，我的题按你的简历深挖。每次交卷后都有总分、模块分和逐题反馈。
                         </p>
 
                     </div>
@@ -759,92 +757,7 @@ export function InterviewPracticeClient({
                     </div>
                 </div>
 
-                <div className="mb-8 flex flex-wrap gap-3">
-                    <button
-                        onClick={() => setActiveMode('company')}
-                        aria-pressed={activeMode === 'company'}
-                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
-                            activeMode === 'company'
-                                ? 'border-primary bg-primary/10 text-text-main'
-                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
-                        }`}
-                    >
-                        <FolderKanban className="h-4 w-4" />
-                        大厂面经
-                    </button>
-                    <button
-                        onClick={() => setActiveMode('marathon')}
-                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
-                            activeMode === 'marathon'
-                                ? 'border-primary bg-primary/10 text-text-main'
-                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
-                        }`}
-                    >
-                        <LibraryBig className="h-4 w-4" />
-                        {marathonModeLabel}
-                    </button>
-                    <button
-                        onClick={() => setActiveMode('mock')}
-                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
-                            activeMode === 'mock'
-                                ? 'border-primary bg-primary/10 text-text-main'
-                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
-                        }`}
-                    >
-                        <Brain className="h-4 w-4" />
-                        模拟面试
-                    </button>
-                    <button
-                        onClick={() => resumeProfile && setActiveMode('resume')}
-                        disabled={!resumeProfile}
-                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
-                            activeMode === 'resume'
-                                ? 'border-primary bg-primary/10 text-text-main'
-                                : 'border-white/10 bg-white/[0.04] text-text-muted'
-                        } ${
-                            resumeProfile
-                                ? 'hover:border-white/20 hover:text-text-main'
-                                : 'cursor-not-allowed opacity-60'
-                        }`}
-                    >
-                        {resumeProfile ? (
-                            <FileCheck2 className="h-4 w-4" />
-                        ) : (
-                            <LockKeyhole className="h-4 w-4" />
-                        )}
-                        简历定向题
-                    </button>
-                    <button
-                        onClick={() => marathonCompleted && setActiveMode('cards')}
-                        disabled={!marathonCompleted}
-                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
-                            activeMode === 'cards'
-                                ? 'border-primary bg-primary/10 text-text-main'
-                                : 'border-white/10 bg-white/[0.04] text-text-muted'
-                        } ${
-                            marathonCompleted
-                                ? 'hover:border-white/20 hover:text-text-main'
-                                : 'cursor-not-allowed opacity-60'
-                        }`}
-                    >
-                        {marathonCompleted ? (
-                            <Unlock className="h-4 w-4" />
-                        ) : (
-                            <LockKeyhole className="h-4 w-4" />
-                        )}
-                        抽卡式答题
-                    </button>
-
-                    <span className="mx-1 hidden self-center text-white/20 sm:inline">|</span>
-
-                    <Link
-                        href="/project"
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
-                    >
-                        <FolderKanban className="h-4 w-4" />
-                        {user ? `${user.name}项目深挖` : '登录查看我的项目深挖'}
-                    </Link>
-                </div>
+                <PracticeNav activeMode={activeMode} onChange={setActiveMode} loggedIn={Boolean(user)} />
 
                 {activeMode === 'company' ? (
                     <CompanyInterviewPractice banks={companyBanks} />
@@ -884,13 +797,13 @@ export function InterviewPracticeClient({
                                         </div>
                                         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                                             <div className="text-sm text-text-muted">
-                                                解锁
+                                                之后
                                             </div>
                                             <div className="mt-2 text-3xl font-semibold">
                                                 抽卡
                                             </div>
                                             <div className="mt-2 text-sm text-text-muted">
-                                                全部交卷后开放精练模式
+                                                按低分模块反复精练
                                             </div>
                                         </div>
                                     </div>
@@ -908,7 +821,7 @@ export function InterviewPracticeClient({
                                         </button>
                                         {marathonCompleted && (
                                             <div className="text-sm text-success">
-                                                你已经完成过一轮全刷，抽卡模式已解锁
+                                                你已经完成过一轮全刷
                                             </div>
                                         )}
                                     </div>
@@ -925,7 +838,7 @@ export function InterviewPracticeClient({
                                         <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
                                             <p>先拿到一张完整底图，知道自己最弱的是哪一块。</p>
                                             <p>不是只看总分，还能看每个模块的高低。</p>
-                                            <p>全部交卷后，抽卡式答题会自动解锁。</p>
+                                            <p>交卷后看模块分，再去抽卡补最弱的模块。</p>
                                         </div>
                                     </div>
 
@@ -1153,10 +1066,6 @@ export function InterviewPracticeClient({
                                         <div className="text-sm leading-7 text-text-muted">
                                             当前已答 {marathonAnsweredCount}/
                                             {totalQuestions} 题。
-                                            {marathonAnsweredCount ===
-                                            totalQuestions
-                                                ? ' 这轮交卷后会解锁抽卡式答题。'
-                                                : ` 只有 ${totalQuestionsCountLabel}全部答完，抽卡模式才会解锁。`}
                                         </div>
                                         <button
                                             onClick={submitMarathon}
@@ -1179,21 +1088,17 @@ export function InterviewPracticeClient({
                                 onReset={resetMarathon}
                                 onRetry={startMarathon}
                                 retryLabel={`再刷 ${totalQuestionsCountLabel}`}
-                                extraHint={
-                                    marathonCompleted
-                                        ? `你已经完成了 ${marathonModeLabel}，抽卡式答题现在已经解锁。`
-                                        : `这轮还没把 ${totalQuestionsCountLabel}全部答完，所以抽卡式答题暂时不会解锁。`
-                                }
+                                extraHint="交卷后可以去抽卡模式，按低分模块反复补。"
                                 extraAction={
-                                    marathonCompleted ? (
+                                    (
                                         <button
                                             onClick={() => setActiveMode('cards')}
                                             className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
                                         >
                                             <Unlock className="h-4 w-4" />
-                                            去抽卡式答题
+                                            去抽卡补短板
                                         </button>
-                                    ) : undefined
+                                    )
                                 }
                             />
                         )}
@@ -1743,7 +1648,7 @@ export function InterviewPracticeClient({
                             </div>
                         </section>
                     )
-                ) : marathonCompleted ? (
+                ) : (
                     <>
                         {sessionQuestions.length === 0 ? (
                             <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
@@ -1755,7 +1660,7 @@ export function InterviewPracticeClient({
                                         </span>
                                     </div>
                                     <div className="mt-5 rounded-[24px] border border-success/20 bg-success/10 p-4 text-sm leading-7 text-text-main/90">
-                                        100 题全刷已完成。现在可以随机抽题，专门反复练你最薄弱的模块。
+                                        按模块随机抽题，专门反复练你最薄弱的模块。
                                     </div>
                                     <div className="mt-5 grid gap-4 md:grid-cols-3">
                                         {[
@@ -2058,30 +1963,6 @@ export function InterviewPracticeClient({
                             />
                         )}
                     </>
-                ) : (
-                    <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur">
-                        <div className="flex items-center gap-3 text-warning">
-                            <LockKeyhole className="h-5 w-5" />
-                            <span className="text-sm font-medium">
-                                抽卡模式暂未解锁
-                            </span>
-                        </div>
-                        <h2 className="mt-4 text-2xl font-semibold">
-                            先完成一轮 {marathonModeLabel}
-                        </h2>
-                        <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
-                            你要先把 {totalQuestionsCountLabel}
-                            完整交卷一次，系统才会开放抽卡式答题。这样做的目的是先把底图摸清楚，再去针对性补弱项。
-                        </p>
-                        <div className="mt-6">
-                            <button
-                                onClick={() => setActiveMode('marathon')}
-                                className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-                            >
-                                去刷 {totalQuestionsCountLabel}
-                            </button>
-                        </div>
-                    </section>
                 )}
             </div>
         </main>
