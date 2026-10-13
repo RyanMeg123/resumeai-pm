@@ -7,7 +7,7 @@ import { contentHash, deleteData, readData, withDataLock, writeData } from './ai
 
 const ACCOUNTS = {
     zhangwenjing: { name: '张文婧', projectPrefix: 'zhangwenjing-', person: '张文婧' },
-    xiaohe: { name: 'xiaohe', projectPrefix: 'xiaohe-', person: 'xiaohe' },
+    xiaohe: { name: '高懿斐', projectPrefix: 'xiaohe-', person: 'xiaohe' },
     tianyijia: { name: '田益嘉', projectPrefix: 'tianyijia-', person: 'tianyijia' },
 } as const
 
