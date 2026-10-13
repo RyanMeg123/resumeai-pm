@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "company_slug": "li-auto",
+  "company_name": "理想汽车",
+  "question_count": 20,
+  "deduplicated": false,
+  "question_text_mode": "依据采集正文归一化转述，非逐字原题。",
+  "sources": [
+    {
+      "id": "79c2269bea0ce758",
+      "title": "理想AI产品二面",
+      "url": "https://www.nowcoder.com/discuss/795292887301824512",
+      "source_type": "community_self_report_unverified",
+      "fetched_at": "2026-10-09T12:04:39.994430+08:00",
+      "published_at": null,
+      "date_note": "页面显示2025-09-10，作为基础能力仍有价值的历史参考",
+      "verification": "作者自述或整理材料；未独立验证为真实面试原题。",
+      "content_hash": "1113c71f349c3ad999b636820ffa48996389a5f3f4d31c8ba70b0e77139c2ac1"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "li-auto-79c2269bea0ce758-s01",
+      "source_id": "79c2269bea0ce758",
+      "interview_date": null,
+      "question_count": 20,
+      "label": "二面",
+      "interview_round": 2,
+      "date_basis": "正文未提供可靠面试日期；页面发布/编辑日期不作面试日期",
+      "source_locator": "原文编号1–20"
+    }
+  ],
+  "questions": [
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q01",
+      "index": 1,
+      "company": "理想汽车",
+      "prompt": "请概括个人背景和与岗位相关的经历。",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 1,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q02",
+      "index": 2,
+      "company": "理想汽车",
+      "prompt": "专业背景与AI不同，为什么选择AI产品经理？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 2,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q03",
+      "index": 3,
+      "company": "理想汽车",
+      "prompt": "你如何理解AI产品经理的工作职责？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 3,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q04",
+      "index": 4,
+      "company": "理想汽车",
+      "prompt": "AI产品经理需要哪些核心技能？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 4,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q05",
+      "index": 5,
+      "company": "理想汽车",
+      "prompt": "你如何判断人工智能未来的发展方向？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 5,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q06",
+      "index": 6,
+      "company": "理想汽车",
+      "prompt": "哪段实习带来的成长最大，为什么？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 6,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q07",
+      "index": 7,
+      "company": "理想汽车",
+      "prompt": "请展开介绍你在小米的实习经历。",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 7,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q08",
+      "index": 8,
+      "company": "理想汽车",
+      "prompt": "你用过哪些大模型优化策略，怎样调整？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 8,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q09",
+      "index": 9,
+      "company": "理想汽车",
+      "prompt": "请说明在小米实习期间的数据评测工作。",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 9,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q10",
+      "index": 10,
+      "company": "理想汽车",
+      "prompt": "评测用了哪些核心指标，它们如何得到？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 10,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q11",
+      "index": 11,
+      "company": "理想汽车",
+      "prompt": "实习期间最大的困难是什么，你如何解决？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 11,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q12",
+      "index": 12,
+      "company": "理想汽车",
+      "prompt": "请展开介绍你在MiniMax的实习经历。",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 12,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q13",
+      "index": 13,
+      "company": "理想汽车",
+      "prompt": "你具体参与了哪些数据标注工作？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 13,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q14",
+      "index": 14,
+      "company": "理想汽车",
+      "prompt": "你在提示词设计和优化上做过什么？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 14,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q15",
+      "index": 15,
+      "company": "理想汽车",
+      "prompt": "请结合产品场景解释深度学习与强化学习的原理和用途。",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 15,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q16",
+      "index": 16,
+      "company": "理想汽车",
+      "prompt": "有监督与无监督学习有什么区别，各适合什么需求？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 16,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q17",
+      "index": 17,
+      "company": "理想汽车",
+      "prompt": "面对新需求，如何选择模型并验证其达到预期？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 17,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q18",
+      "index": 18,
+      "company": "理想汽车",
+      "prompt": "你了解哪些类型的大模型，它们分别用于什么场景？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 18,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q19",
+      "index": 19,
+      "company": "理想汽车",
+      "prompt": "你的SQL和Python能力如何，有什么实际程序或分析案例？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 19,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "li-auto-79c2269bea0ce758-s01-q20",
+      "index": 20,
+      "company": "理想汽车",
+      "prompt": "如何证明你的数据分析能力？",
+      "source_id": "79c2269bea0ce758",
+      "session_id": "li-auto-79c2269bea0ce758-s01",
+      "source_question_index": 20,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    }
+  ]
+}

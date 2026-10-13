@@ -10,19 +10,7 @@ import { getAiPmRequirementsPrompt } from './ai-pm-requirements'
 import { InterviewQuestion } from './interview-types'
 import { ResumeInterviewProfile } from './interview-profile'
 
-const AIHUBMIX_URL = 'https://aihubmix.com/v1/chat/completions'
 const AI_PM_REQUIREMENTS_PROMPT = getAiPmRequirementsPrompt()
-
-function getAiHubMixApiKey() {
-    const apiKey =
-        process.env.AIHUBMIX_API_KEY || process.env.GEMINI_API_KEY || ''
-
-    if (!apiKey) {
-        throw new Error('缺少 AIHUBMIX_API_KEY 环境变量')
-    }
-
-    return apiKey
-}
 
 const AI_PM_SYSTEM_PROMPT = `你是一名资深 AI 产品经理招聘顾问和简历重构专家。
 
@@ -50,13 +38,6 @@ ${AI_PM_REQUIREMENTS_PROMPT}
 - 项目描述优先使用“负责/主导/设计/定义/推进/搭建/优化/验证/落地”等动词。
 - 每条建议都要尽量具体、可执行，指出缺了什么、为什么缺、应该怎么补。`
 
-function createJsonMessages(prompt: string) {
-    return [
-        { role: 'system', content: AI_PM_SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-    ]
-}
-
 type JsonObject = Record<string, unknown>
 
 function isObject(value: unknown): value is JsonObject {
@@ -67,114 +48,16 @@ function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0
 }
 
-function createTimeoutGuard(timeoutMs: number) {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-
-    const promise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-            reject(new Error('AI 请求超时，请重试'))
-        }, timeoutMs)
+async function requestJsonCompletion<T>({ prompt, maxTokens, validate }: {
+    prompt: string; maxTokens: number; validate: (value: unknown) => T
+}): Promise<T> {
+    const response = await fetch('/api/ai/completion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: AI_PM_SYSTEM_PROMPT, prompt, maxTokens, json: true, generate: true }),
     })
-
-    return {
-        promise,
-        cleanup: () => {
-            if (timeoutId) {
-                clearTimeout(timeoutId)
-            }
-        },
-    }
-}
-
-async function requestJsonCompletion<T>({
-    prompt,
-    maxTokens,
-    timeoutMs,
-    maxAttempts,
-    validate,
-}: {
-    prompt: string
-    maxTokens: number
-    timeoutMs: number
-    maxAttempts: number
-    validate: (value: unknown) => T
-}): Promise<T> {
-    let lastError: unknown = null
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-        const retryPrompt =
-            attempt === 1
-                ? prompt
-                : `${prompt}\n\n上一次返回不符合要求。请重新输出，并严格确保：\n1. 只返回 JSON 对象。\n2. 不要返回空 projects。\n3. 所有字段都使用简体中文。`
-        const { promise: timeoutPromise, cleanup } = createTimeoutGuard(timeoutMs)
-
-        try {
-            const response = (await Promise.race([
-                fetch(AIHUBMIX_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${getAiHubMixApiKey()}`,
-                    },
-                    body: JSON.stringify({
-                        model: 'gemini-3.1-flash-lite-preview',
-                        messages: createJsonMessages(retryPrompt),
-                        temperature: 0,
-                        max_tokens: maxTokens,
-                        response_format: { type: 'json_object' },
-                    }),
-                }),
-                timeoutPromise,
-            ])) as Response
-
-            if (!response.ok) {
-                const err = await response.text()
-                console.error('AIHubMix API Error:', err)
-                throw new Error(`API Error: ${response.status}`)
-            }
-
-            const payload = await response.json()
-            const responseText = payload.choices?.[0]?.message?.content
-
-            if (!isNonEmptyString(responseText)) {
-                throw new Error('AI 返回为空')
-            }
-
-            const parsed = JSON.parse(responseText)
-            return validate(parsed)
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error))
-            console.error(
-                `AI completion attempt ${attempt} failed:`,
-                lastError,
-            )
-        } finally {
-            cleanup()
-        }
-    }
-
-    throw lastError instanceof Error
-        ? lastError
-        : new Error('AI 返回了无效数据')
-}
-
-async function requestJsonCompletionSafe<T>({
-    fallback,
-    ...options
-}: {
-    prompt: string
-    maxTokens: number
-    timeoutMs: number
-    maxAttempts: number
-    validate: (value: unknown) => T
-    fallback: T
-}): Promise<T> {
-    try {
-        return await requestJsonCompletion(options)
-    } catch (error) {
-        console.warn('AI completion fallback triggered:', error)
-        return fallback
-    }
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'AI 请求失败，未自动重试')
+    return validate(JSON.parse(data.record.content))
 }
 
 function normalizeResumeData(value: unknown): ResumeData {
@@ -346,7 +229,7 @@ function normalizeGeneratedInterviewQuestions(value: unknown): InterviewQuestion
 
     return questions.map((item, index) => ({
         ...item,
-        id: item.id || `resume-q-${index + 1}`,
+        id: `resume-q-${index + 1}`,
         index: index + 1,
     }))
 }
@@ -366,9 +249,7 @@ function normalizeGeneratedInterviewQuestion(value: unknown): InterviewQuestion 
     }
 
     return {
-        id:
-            (isNonEmptyString(value.id) && value.id.trim()) ||
-            `mock-q-${Date.now()}`,
+        id: `mock-q-${typeof value.index === 'number' && Number.isFinite(value.index) ? value.index : 1}`,
         index:
             typeof value.index === 'number' && Number.isFinite(value.index)
                 ? value.index
@@ -398,65 +279,6 @@ function buildTargetRolePrompt(targetRole?: TargetRoleProfile | null) {
     )
 
     return lines.join('\n')
-}
-
-function buildFallbackFullResumeDraft({
-    resumeData,
-    selectedProjects,
-    targetRole,
-}: {
-    resumeData: ResumeData
-    selectedProjects: Array<{
-        name: string
-        role: string
-        duration: string
-        text: string
-    }>
-    targetRole?: TargetRoleProfile | null
-}): FullResumeDraft {
-    const title = targetRole?.title?.trim()
-        ? `${targetRole.title.trim()}定向简历草稿`
-        : 'AI 产品经理简历草稿'
-
-    const summary = `已按当前目标岗位整理出一版整份简历草稿。你可以先直接使用这版，再补充更细的数字、结果和岗位关键词。`
-
-    const highlights = [
-        '已把你锁定的项目版本合并进整份简历草稿',
-        targetRole?.title?.trim()
-            ? `内容会优先贴近“${targetRole.title.trim()}”岗位`
-            : '内容按通用 AI 产品经理岗位标准整理',
-        '没有明确数据的地方，建议再补一轮结果和指标',
-    ]
-
-    const projectText = selectedProjects
-        .map(
-            (project) =>
-                `【${project.name}】\n${project.role} | ${project.duration}\n${project.text}`,
-        )
-        .join('\n\n')
-
-    const educationText =
-        resumeData.education.length > 0
-            ? resumeData.education
-                  .map(
-                      (item) =>
-                          `${item.school}${
-                              item.major ? ` · ${item.major}` : ''
-                          }${item.year ? ` · ${item.year}` : ''}`,
-                  )
-                  .join('\n')
-            : '【建议补充：教育经历】'
-
-    return {
-        title,
-        summary,
-        highlights,
-        fullText: `姓名：${resumeData.name}\n求职方向：${
-            targetRole?.title?.trim() || 'AI 产品经理'
-        }\n\n个人概述：\n${summary}\n\n项目经历：\n${
-            projectText || '【建议补充：核心项目经历】'
-        }\n\n教育经历：\n${educationText}`,
-    }
 }
 
 export async function parseResume(
@@ -516,8 +338,8 @@ ${text}
     return requestJsonCompletion({
         prompt,
         maxTokens: 4096,
-        timeoutMs: 45000,
-        maxAttempts: 3,
+
+
         validate: normalizeResumeData,
     })
 }
@@ -557,17 +379,12 @@ ${AI_PM_REQUIREMENTS_PROMPT}
   "datadriven": "A version that maximizes quantitative expression (e.g., model accuracy, latency, DAU, ROI), adding placeholders for missing metrics."
 }`
 
-    return requestJsonCompletionSafe({
+    return requestJsonCompletion({
         prompt,
         maxTokens: 2048,
-        timeoutMs: 45000,
-        maxAttempts: 3,
+
+
         validate: normalizeProjectVersions,
-        fallback: {
-            concise: 'AI 生成失败，请重试。',
-            detailed: 'AI 生成失败，请重试。',
-            datadriven: 'AI 生成失败，请重试。',
-        },
     })
 }
 
@@ -598,59 +415,13 @@ ${userRequest}
 ${AI_PM_REQUIREMENTS_PROMPT}
 - 保持简历语言，必须用简体中文。`
 
-    const response = await fetch(AIHUBMIX_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getAiHubMixApiKey()}`,
-        },
-        body: JSON.stringify({
-            model: 'gemini-3.1-flash-lite-preview',
-            messages: createJsonMessages(prompt),
-            stream: true,
-        }),
+    const response = await fetch('/api/ai/completion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: AI_PM_SYSTEM_PROMPT, prompt, maxTokens: 2500, json: false, generate: true }),
     })
-
-    if (!response.ok) {
-        const err = await response.text()
-        console.error('AIHubMix API Error:', err)
-        throw new Error(`API Error: ${response.status}`)
-    }
-
-    const reader = response.body?.getReader()
-    const decoder = new TextDecoder('utf-8')
-
-    if (!reader) return
-
-    let buffer = ''
-    while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-
-        // Keep the last incomplete line in the buffer
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-            const trimmedLine = line.trim()
-            if (
-                trimmedLine.startsWith('data: ') &&
-                trimmedLine !== 'data: [DONE]'
-            ) {
-                try {
-                    const data = JSON.parse(trimmedLine.slice(6))
-                    const content = data.choices[0]?.delta?.content
-                    if (content) {
-                        yield content
-                    }
-                } catch (e) {
-                    // Ignore parse errors on incomplete chunks
-                }
-            }
-        }
-    }
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'AI 修改失败，未自动重试')
+    yield data.record.content as string
 }
 
 export async function generateFullResumeDraft({
@@ -692,12 +463,6 @@ ${project.text}`,
                   .join('\n')
             : '暂无明确教育信息'
 
-    const fallback = buildFallbackFullResumeDraft({
-        resumeData,
-        selectedProjects,
-        targetRole,
-    })
-
     const prompt = `请基于下面这些信息，输出一份“整份简历草稿”，用于 AI 产品经理岗位投递。
 
 本次求职目标如下：
@@ -734,81 +499,13 @@ ${selectedProjectText || '暂无已确认项目'}
   "fullText": "完整简历正文，使用简体中文，保留清晰分段和换行"
 }`
 
-    return requestJsonCompletionSafe({
+    return requestJsonCompletion({
         prompt,
         maxTokens: 4096,
-        timeoutMs: 45000,
-        maxAttempts: 3,
+
+
         validate: normalizeFullResumeDraft,
-        fallback,
     })
-}
-
-function buildFallbackResumeInterviewQuestions({
-    profile,
-    count,
-}: {
-    profile: ResumeInterviewProfile
-    count: number
-}): InterviewQuestion[] {
-    const project = profile.selectedProjects[0]
-    const targetRole = profile.targetRoleProfile?.title || 'AI 产品经理'
-    const baseQuestions: Array<{
-        category: InterviewQuestion['category']
-        prompt: string
-    }> = [
-        {
-            category: '过往经历与行为题',
-            prompt: `请你结合最近一次最核心的项目，介绍一下为什么你适合“${targetRole}”这个岗位？`,
-        },
-        {
-            category: '推进与协作',
-            prompt: `结合${project?.name || '你的核心项目'}，讲一次你是怎么推动算法、工程或业务一起把事情做成的？`,
-        },
-        {
-            category: '评测与指标',
-            prompt: `如果面试官追问${project?.name || '这个项目'}到底怎么衡量效果，你会怎么讲评测指标和上线标准？`,
-        },
-        {
-            category: '产品设计题',
-            prompt: `如果让你继续把${project?.name || '这个项目'}做大，你下一步会优先优化哪个用户场景，为什么？`,
-        },
-        {
-            category: '风险与责任',
-            prompt: `这个方向里你最担心的风险是什么？你会怎么提前控制？`,
-        },
-        {
-            category: '商业与策略',
-            prompt: `如果老板质疑这个方向的投入产出比，你会怎么证明这件事值得继续做？`,
-        },
-        {
-            category: 'AI 基础理解',
-            prompt: `如果面试官问你为什么这个场景适合用大模型，而不是传统规则或流程系统，你会怎么回答？`,
-        },
-        {
-            category: '过往经历与行为题',
-            prompt: `结合你简历里最容易被质疑的一点，面试官如果深挖，你会怎么把它讲圆？`,
-        },
-    ]
-
-    const issueQuestions: InterviewQuestion[] = profile.overallIssues.map((issue, index) => ({
-        id: `resume-q-issue-${index + 1}`,
-        index: index + 1,
-        category: '过往经历与行为题',
-        prompt: `你的简历里有一个明显短板是“${issue}”。如果面试官当场追问，你会怎么回应并补足说服力？`,
-    }))
-
-    const combined: InterviewQuestion[] = [...issueQuestions]
-    for (const item of baseQuestions) {
-        combined.push({
-            id: `resume-q-base-${combined.length + 1}`,
-            index: combined.length + 1,
-            category: item.category,
-            prompt: item.prompt,
-        })
-    }
-
-    return combined.slice(0, Math.max(1, count))
 }
 
 export async function generateResumeInterviewQuestions({
@@ -859,68 +556,13 @@ ${project.text}`,
   ]
 }`
 
-    return requestJsonCompletionSafe({
+    return requestJsonCompletion({
         prompt,
         maxTokens: 2048,
-        timeoutMs: 45000,
-        maxAttempts: 3,
+
+
         validate: normalizeGeneratedInterviewQuestions,
-        fallback: buildFallbackResumeInterviewQuestions({ profile, count }),
     })
-}
-
-function buildFallbackMockInterviewQuestion({
-    profile,
-    round,
-}: {
-    profile?: ResumeInterviewProfile | null
-    round: number
-}): InterviewQuestion {
-    const project = profile?.selectedProjects[0]
-    const targetRole = profile?.targetRoleProfile?.title || 'AI 产品经理'
-
-    if (round === 1) {
-        return {
-            id: 'mock-q-1',
-            index: 1,
-            category: '过往经历与行为题',
-            prompt: `请你先做一个 1 到 2 分钟的自我介绍，并说明为什么你适合“${targetRole}”这个岗位。`,
-        }
-    }
-
-    if (round === 2) {
-        return {
-            id: 'mock-q-2',
-            index: 2,
-            category: '推进与协作',
-            prompt: `我们具体聊聊${project?.name || '你简历里最重要的项目'}。你当时到底做了哪些关键推进，怎么把算法、工程和业务拉到同一条线上？`,
-        }
-    }
-
-    if (round === 3) {
-        return {
-            id: 'mock-q-3',
-            index: 3,
-            category: '评测与指标',
-            prompt: `如果我继续追问这个项目的结果，你会用哪些指标证明它真的做成了？哪些数字是你最希望在面试里主动讲出来的？`,
-        }
-    }
-
-    if (round === 4) {
-        return {
-            id: 'mock-q-4',
-            index: 4,
-            category: '产品设计题',
-            prompt: `如果让你现在继续做这个方向，你下一步会优先优化哪个用户场景？为什么是它，不是别的？`,
-        }
-    }
-
-    return {
-        id: `mock-q-${round}`,
-        index: round,
-        category: '风险与责任',
-        prompt: `最后一个问题：如果这个 AI 能力上线后出现明显错误回答或业务方质疑价值，你会怎么处理？`,
-    }
 }
 
 export async function generateMockInterviewQuestion({
@@ -984,12 +626,11 @@ ${history
   "prompt": "下一道面试官问题"
 }`
 
-    return requestJsonCompletionSafe({
+    return requestJsonCompletion({
         prompt,
         maxTokens: 1024,
-        timeoutMs: 45000,
-        maxAttempts: 3,
+
+
         validate: normalizeGeneratedInterviewQuestion,
-        fallback: buildFallbackMockInterviewQuestion({ profile, round }),
     })
 }

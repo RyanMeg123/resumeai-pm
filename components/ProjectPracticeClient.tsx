@@ -1,5 +1,7 @@
 'use client'
 
+import { AIQuestionHelp } from './AIQuestionHelp'
+import { usePracticeUser, practiceStorageKey } from '@/components/PracticeAccount'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -94,12 +96,14 @@ function ResultPanel({
     onRetry,
     retryLabel,
     extraHint,
+    projectSetId,
 }: {
     title: string
     result: InterviewEvaluation
     onReset: () => void
     onRetry: () => void
     retryLabel: string
+    projectSetId: string
     extraHint?: string
 }) {
     return (
@@ -231,6 +235,7 @@ function ResultPanel({
                         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
                             {item.answer || '这题未作答'}
                         </div>
+                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} projectSetId={projectSetId} />
                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                             <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
                                 <div className="text-sm font-medium">做得好的地方</div>
@@ -265,6 +270,12 @@ export function ProjectPracticeClient({
     projectQuestionSets: ProjectQuestionSet[]
     guides?: InterviewGuide[]
 }) {
+    const generatedFromResume = projectQuestionSets[0]?.id.startsWith('ai-') ?? false
+    const user = usePracticeUser()
+    const storageKey = practiceStorageKey(`resumeai-pm-project-draft-v1:${projectQuestionSets[0]?.id ?? 'empty'}`, user)
+    const [draftReady, setDraftReady] = useState(false)
+    const [storageMessage, setStorageMessage] = useState('')
+    const [submissionError, setSubmissionError] = useState('')
     const [activeTopTab, setActiveTopTab] = useState<TopTab>('projects')
 
     const guidesMap = useMemo(
@@ -303,6 +314,42 @@ export function ProjectPracticeClient({
         return () => window.clearInterval(timer)
     }, [startedAt, result])
 
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(storageKey) ?? (projectQuestionSets[0]?.id.startsWith('ai-') ? null : window.localStorage.getItem(practiceStorageKey('resumeai-pm-project-draft-v1', user)))
+            if (raw) {
+                const saved = JSON.parse(raw)
+                const set = projectQuestionSets.find((item) => item.id === saved?.setId)
+                if (set && Array.isArray(saved.questionIds)) {
+                    const ids = new Set(saved.questionIds.filter((id: unknown) => typeof id === 'string'))
+                    const restored = saved.questionIds.flatMap((id: unknown) => {
+                        const question = set.questions.find((item) => item.id === id)
+                        return question ? [question] : []
+                    }) as InterviewQuestion[]
+                    if (restored.length === ids.size && restored.length <= set.questions.length) {
+                        setSelectedProjectSetId(set.id)
+                        setSessionQuestions(restored)
+                        const answerMap = saved.answers && typeof saved.answers === 'object' ? saved.answers : {}
+                        setAnswers(Object.fromEntries(Object.entries(answerMap).filter(([id, value]) => ids.has(id) && typeof value === 'string')) as Record<string, string>)
+                        setCurrentIndex(Number.isInteger(saved.currentIndex) ? Math.max(0, Math.min(saved.currentIndex, restored.length - 1)) : 0)
+                        const elapsed = typeof saved.elapsedSeconds === 'number' && Number.isFinite(saved.elapsedSeconds) ? Math.max(0, saved.elapsedSeconds) : 0
+                        setElapsedSeconds(elapsed)
+                        if (restored.length) setStartedAt(Date.now() - elapsed * 1000)
+                    }
+                }
+            }
+        } catch { setStorageMessage('未能恢复草稿，请留意保存提示。') }
+        setDraftReady(true)
+    }, [storageKey, projectQuestionSets, user])
+
+    useEffect(() => {
+        if (!draftReady) return
+        try {
+            window.localStorage.setItem(storageKey, JSON.stringify({ setId: selectedProjectSetId, questionIds: sessionQuestions.map((question) => question.id), answers, currentIndex, elapsedSeconds }))
+            setStorageMessage('练习草稿已保存到当前账号（本机）')
+        } catch { setStorageMessage('草稿保存失败，请勿刷新页面；可先复制回答。') }
+    }, [draftReady, storageKey, selectedProjectSetId, sessionQuestions, answers, currentIndex, elapsedSeconds])
+
     const answeredCount = useMemo(
         () => countAnswered(sessionQuestions, answers),
         [answers, sessionQuestions],
@@ -320,7 +367,7 @@ export function ProjectPracticeClient({
         totalElapsedSeconds: number
     }) => {
         const payload = {
-            questions,
+            projectSetId: selectedProjectSetId,
             questionIds: questions.map((item) => item.id),
             elapsedSeconds: totalElapsedSeconds,
             answers: questions.map(
@@ -378,6 +425,7 @@ export function ProjectPracticeClient({
         }
 
         setIsSubmitting(true)
+        setSubmissionError('')
 
         try {
             const evaluation = await requestEvaluation({
@@ -387,12 +435,13 @@ export function ProjectPracticeClient({
             })
             setResult(evaluation)
         } catch (error) {
-            console.error(error)
-            alert('交卷失败，请稍后重试')
+            setSubmissionError(error instanceof Error ? error.message : '交卷失败，请稍后重试')
         } finally {
             setIsSubmitting(false)
         }
     }
+
+    if (!draftReady) return <p className="p-8 text-text-muted">正在恢复你的练习草稿…</p>
 
     if (!selectedProjectSet) {
         return (
@@ -426,11 +475,13 @@ export function ProjectPracticeClient({
                             {personName}面试全准备
                         </h1>
                         <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted md:text-base">
-                            项目深挖、自我介绍、发散性问题、反问面试官——面试全流程覆盖。
+                            {generatedFromResume ? '根据你保存的简历生成项目深挖、参考思路和可能追问，请核对事实后使用。' : '项目深挖、自我介绍、发散性问题、反问面试官——面试全流程覆盖。'}
                         </p>
                     </div>
                 </div>
 
+                <p role="status" className="mb-4 text-sm text-text-muted">{storageMessage}</p>
+                {submissionError && <p role="alert" className="mb-4 text-error">{submissionError}。回答已保留，可再次提交。</p>}
                 {/* Top-level tabs */}
                 <div className="mb-8 flex flex-wrap gap-3">
                     {(Object.entries(TAB_CONFIG) as [TopTab, typeof TAB_CONFIG[TopTab]][]).map(
@@ -568,7 +619,7 @@ export function ProjectPracticeClient({
                                     </h2>
                                 </div>
                                 <div className="mt-4 space-y-3 text-sm leading-7 text-text-muted">
-                                    <p>每道题都来自你的真实项目文档（PRD、立项报告），不是泛泛的概念题。</p>
+                                    <p>{generatedFromResume ? '题目依据你保存的简历由 AI 生成；缺少的经历和结果需由你补充核实。' : '每道题都来自你的项目材料，可以结合真实经历进行练习。'}</p>
                                     <p>覆盖需求洞察、方案设计、模型选型、交互体验、数据策略、商业化、风险兜底、项目管理。</p>
                                     <p>每题都有参考答案，答完后可以对照查看，查缺补漏。</p>
                                 </div>
@@ -593,12 +644,13 @@ export function ProjectPracticeClient({
                     </section>
                 ) : result ? (
                     <ResultPanel
+                        projectSetId={selectedProjectSet.id}
                         title="项目深挖总分"
                         result={result}
                         onReset={resetSession}
                         onRetry={startProjectSession}
                         retryLabel="再来一轮项目深挖"
-                        extraHint={`这轮题目来自「${selectedProjectSet.person} · ${selectedProjectSet.project}」的项目文档。可以对照参考答案查缺补漏。`}
+                        extraHint={`这轮题目来自「${selectedProjectSet.person} · ${selectedProjectSet.project}」的项目材料。可以对照参考答案查缺补漏。`}
                     />
                 ) : currentQuestion ? (
                     <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -696,6 +748,7 @@ export function ProjectPracticeClient({
                                     placeholder="尽量把场景、判断、动作、结果讲完整，就像在真实面试中回答一样。"
                                     className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                 />
+                                <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} projectSetId={selectedProjectSet.id} />
                             </div>
 
                             {selectedProjectSet.referenceAnswers[currentQuestion.id] && (

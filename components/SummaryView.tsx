@@ -1,3 +1,5 @@
+import { SaveResumeForPractice } from './SaveResumeForPractice';
+import { usePracticeUser, practiceStorageKey } from '@/components/PracticeAccount'
 import React from 'react';
 import Link from 'next/link';
 import { ResumeData, TargetRoleProfile } from '../lib/types';
@@ -18,6 +20,8 @@ export function SummaryView({
   originalResumeText: string,
   targetRoleProfile: TargetRoleProfile | null,
 }) {
+  const user = usePracticeUser();
+  const profileStorageKey = practiceStorageKey(RESUME_INTERVIEW_PROFILE_STORAGE_KEY, user);
   const lockedProjects = React.useMemo(
     () => data.projects.filter(p => p.lockedVersion),
     [data.projects],
@@ -312,7 +316,7 @@ export function SummaryView({
     }
 
     window.localStorage.setItem(
-      RESUME_INTERVIEW_PROFILE_STORAGE_KEY,
+      profileStorageKey,
       JSON.stringify({
         name: data.name,
         targetRoleProfile,
@@ -321,10 +325,15 @@ export function SummaryView({
         updatedAt: new Date().toISOString(),
       }),
     );
-  }, [data.name, data.overallIssues, getLockedVersionText, lockedProjects, selectedLockedProjects, targetRoleProfile]);
+  }, [data.name, data.overallIssues, getLockedVersionText, lockedProjects, selectedLockedProjects, targetRoleProfile, profileStorageKey]);
 
   return (
     <div className="max-w-4xl mx-auto pt-12 px-6 pb-20">
+      <SaveResumeForPractice text={[
+        `姓名：${data.name}`,
+        ...data.education.map(item => `${item.school} ${item.major} ${item.year}`),
+        ...(selectedLockedProjects.length ? selectedLockedProjects : lockedProjects).map(project => `项目：${project.name}\n角色：${project.role}\n时间：${project.duration}\n${getLockedVersionText(project) || ''}`),
+      ].join('\n\n')} />
       <button 
         onClick={onBack}
         className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors mb-8"

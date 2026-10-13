@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "company_slug": "futu",
+  "company_name": "富途",
+  "question_count": 10,
+  "deduplicated": false,
+  "question_text_mode": "依据采集正文归一化转述，非逐字原题。",
+  "sources": [
+    {
+      "id": "7fd89ec44d8def46",
+      "title": "富途AI产品经理日常实习二面",
+      "url": "https://www.nowcoder.com/feed/main/detail/34d7ed816cac425da58f4dd35210d913",
+      "source_type": "community_self_report_unverified",
+      "fetched_at": "2026-10-09T12:04:42.324475+08:00",
+      "published_at": null,
+      "date_note": "页面显示2025-05-22；作者称为此前实习面经，实际面试时间未知",
+      "verification": "作者自述或整理材料；未独立验证为真实面试原题。",
+      "content_hash": "3c6203776cb9f4124b1f5c56311e49a9e0939921dfaf0528b7f9c6649c6e524b"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "futu-7fd89ec44d8def46-s01",
+      "source_id": "7fd89ec44d8def46",
+      "interview_date": null,
+      "question_count": 10,
+      "label": "二面",
+      "interview_round": 2,
+      "date_basis": "正文未提供可靠面试日期；页面发布/编辑日期不作面试日期",
+      "source_locator": "原文编号1–10"
+    }
+  ],
+  "questions": [
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q01",
+      "index": 1,
+      "company": "富途",
+      "prompt": "请介绍个人背景和相关经历。",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 1,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q02",
+      "index": 2,
+      "company": "富途",
+      "prompt": "请展开项目与数据竞赛经历，说明数据方法、业务作用及必要但繁琐的工作。",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 2,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q03",
+      "index": 3,
+      "company": "富途",
+      "prompt": "你的职业发展规划是什么？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 3,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q04",
+      "index": 4,
+      "company": "富途",
+      "prompt": "你更偏向产品工作还是研发工作，为什么？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 4,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q05",
+      "index": 5,
+      "company": "富途",
+      "prompt": "你会怎样分析一家公司的股价表现？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 5,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q06",
+      "index": 6,
+      "company": "富途",
+      "prompt": "你对美国股票市场有哪些了解？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 6,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q07",
+      "index": 7,
+      "company": "富途",
+      "prompt": "如何优化任务的提示词？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 7,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q08",
+      "index": 8,
+      "company": "富途",
+      "prompt": "你如何理解RAG及其适用场景？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 8,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q09",
+      "index": 9,
+      "company": "富途",
+      "prompt": "最近有哪些值得关注的AI应用？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 9,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    },
+    {
+      "id": "futu-7fd89ec44d8def46-s01-q10",
+      "index": 10,
+      "company": "富途",
+      "prompt": "有业务知识的问答机器人，应怎样设计实现链路？",
+      "source_id": "7fd89ec44d8def46",
+      "session_id": "futu-7fd89ec44d8def46-s01",
+      "source_question_index": 10,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_list"
+    }
+  ]
+}

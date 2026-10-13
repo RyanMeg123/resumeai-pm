@@ -6,7 +6,32 @@ export interface InterviewQuestion {
     interviewerIntent?: string
     referenceAnswer?: string
     followUp?: string
-    bank?: 'general' | 'project-deep-dive'
+    bank?: 'general' | 'project-deep-dive' | 'company'
+}
+
+export interface CompanyInterviewQuestion extends InterviewQuestion {
+    companySlug: string
+    sessionId: string
+    questionKind: 'main' | 'follow_up' | 'interviewer_request'
+    followUpOf?: string
+    duplicateOf?: string
+    sourceUrl: string
+    sourceTitle: string
+    sourceDateNote: string
+}
+
+export interface CompanyInterviewBank {
+    slug: string
+    title: string
+    questionCount: number
+    sessions: {
+        id: string
+        label: string
+        questionCount: number
+        interviewDate: string | null
+        dateBasis: string
+    }[]
+    questions: CompanyInterviewQuestion[]
 }
 
 export interface ProjectDeepDiveBank {

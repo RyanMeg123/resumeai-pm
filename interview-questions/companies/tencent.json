@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "company_slug": "tencent",
+  "company_name": "腾讯",
+  "question_count": 14,
+  "deduplicated": false,
+  "question_text_mode": "依据采集正文归一化转述，非逐字原题。",
+  "sources": [
+    {
+      "id": "9e172ebf8f231ef6",
+      "title": "腾讯AI产品经理 秋招面经（一面+二面）",
+      "url": "https://api-cdn.nowcoder.com/feed/main/detail/1926665d52794641a3374ecea03de73c",
+      "source_type": "community_self_report_unverified",
+      "fetched_at": "2026-10-09T12:04:35.184606+08:00",
+      "published_at": null,
+      "date_note": "页面只显示09-12，发布年份未知",
+      "verification": "作者自述或整理材料；未独立验证为真实面试原题。",
+      "content_hash": "1e461212f464adfd970e8891be0d51f9afdc826b47840b114c1f541a39bfb682"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01",
+      "source_id": "9e172ebf8f231ef6",
+      "interview_date": null,
+      "question_count": 9,
+      "label": "一面·业务面",
+      "interview_round": 1,
+      "date_basis": "正文一面9月8日、二面9月10日，年份未知",
+      "source_locator": "【一面 · 业务面】"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02",
+      "source_id": "9e172ebf8f231ef6",
+      "interview_date": null,
+      "question_count": 5,
+      "label": "二面·总监面",
+      "interview_round": 2,
+      "date_basis": "正文一面9月8日、二面9月10日，年份未知",
+      "source_locator": "【二面 · 总监面】"
+    }
+  ],
+  "questions": [
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q01",
+      "index": 1,
+      "company": "腾讯",
+      "prompt": "选一款你常用的AI产品，说明实际体验中的不足。",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 1,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q02",
+      "index": 2,
+      "company": "腾讯",
+      "prompt": "针对刚才发现的体验问题，你会怎样改进？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 2,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s01-q01"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q03",
+      "index": 3,
+      "company": "腾讯",
+      "prompt": "你做过的AI功能具体解决谁的什么问题？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 3,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q04",
+      "index": 4,
+      "company": "腾讯",
+      "prompt": "这个项目如何定义成功？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 4,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s01-q03"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q05",
+      "index": 5,
+      "company": "腾讯",
+      "prompt": "上线后的数据结果是什么？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 5,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s01-q03"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q06",
+      "index": 6,
+      "company": "腾讯",
+      "prompt": "如果结果没有达到预期，你会怎样处理？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 6,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s01-q03"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q07",
+      "index": 7,
+      "company": "腾讯",
+      "prompt": "协作文档只能新增一个AI能力时，你会选什么，如何评价成效？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 7,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q08",
+      "index": 8,
+      "company": "腾讯",
+      "prompt": "新增功能的使用率与文档完成指标发生冲突时，应怎样取舍？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 8,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s01-q07"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s01-q09",
+      "index": 9,
+      "company": "腾讯",
+      "prompt": "模型在产品中给出错误答案时，应怎样处理？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s01",
+      "source_question_index": 9,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02-q01",
+      "index": 10,
+      "company": "腾讯",
+      "prompt": "请做自我介绍，并补充简历中没有体现的信息。",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s02",
+      "source_question_index": 1,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02-q02",
+      "index": 11,
+      "company": "腾讯",
+      "prompt": "如果给元宝增加一个功能，你会选什么，为什么？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s02",
+      "source_question_index": 2,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02-q03",
+      "index": 12,
+      "company": "腾讯",
+      "prompt": "你提出的新功能，成本和收益应该怎样评估？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s02",
+      "source_question_index": 3,
+      "question_kind": "follow_up",
+      "extraction_mode": "normalized_from_narrative",
+      "follow_up_of": "tencent-9e172ebf8f231ef6-s02-q02"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02-q04",
+      "index": 13,
+      "company": "腾讯",
+      "prompt": "AI产品经理与普通产品经理的职责有什么不同？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s02",
+      "source_question_index": 4,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    },
+    {
+      "id": "tencent-9e172ebf8f231ef6-s02-q05",
+      "index": 14,
+      "company": "腾讯",
+      "prompt": "为什么选择腾讯？",
+      "source_id": "9e172ebf8f231ef6",
+      "session_id": "tencent-9e172ebf8f231ef6-s02",
+      "source_question_index": 5,
+      "question_kind": "main",
+      "extraction_mode": "normalized_from_narrative"
+    }
+  ]
+}

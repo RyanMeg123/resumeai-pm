@@ -8,3 +8,9 @@ scripts/__pycache__
 *.doc
 *.docx
 .env*
+
+.practice-data
+.next-ai-test
+tests
+
+.next-build-check/

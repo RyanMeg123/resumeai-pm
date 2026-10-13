@@ -19,6 +19,7 @@ export async function POST(request: Request) {
             )
         }
 
+        if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: '文件不能超过 5MB' }, { status: 413 })
         const fileName = file.name.toLowerCase()
         const arrayBuffer = await file.arrayBuffer()
 

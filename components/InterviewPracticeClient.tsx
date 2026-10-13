@@ -1,5 +1,7 @@
 'use client'
 
+import { AIQuestionHelp } from './AIQuestionHelp'
+import { usePracticeUser, practiceStorageKey } from '@/components/PracticeAccount'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -22,14 +24,16 @@ import {
     InterviewAnswerInput,
     InterviewEvaluation,
     InterviewQuestion,
+    CompanyInterviewBank,
 } from '@/lib/interview-types'
+import { CompanyInterviewPractice } from '@/components/CompanyInterviewPractice'
 import {
     generateMockInterviewQuestion,
     generateResumeInterviewQuestions,
 } from '@/lib/gemini'
 import { ResumeInterviewProfile, RESUME_INTERVIEW_PROFILE_STORAGE_KEY } from '@/lib/interview-profile'
 
-type PracticeMode = 'marathon' | 'mock' | 'cards' | 'resume'
+type PracticeMode = 'marathon' | 'mock' | 'cards' | 'resume' | 'company'
 
 const MARATHON_COMPLETED_STORAGE_KEY = 'resumeai-pm-marathon-completed'
 
@@ -315,6 +319,7 @@ function ResultPanel({
                         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
                             {item.answer || '这题未作答'}
                         </div>
+                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} />
                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                             <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
                                 <div className="text-sm font-medium">
@@ -346,9 +351,14 @@ function ResultPanel({
 
 export function InterviewPracticeClient({
     allQuestions,
+    companyBanks,
 }: {
     allQuestions: InterviewQuestion[]
+    companyBanks: CompanyInterviewBank[]
 }) {
+    const user = usePracticeUser()
+    const profileStorageKey = practiceStorageKey(RESUME_INTERVIEW_PROFILE_STORAGE_KEY, user)
+    const marathonStorageKey = practiceStorageKey(MARATHON_COMPLETED_STORAGE_KEY, user)
     const totalQuestions = allQuestions.length
     const totalQuestionsLabel = `${totalQuestions}题`
     const totalQuestionsCountLabel = `${totalQuestions} 道`
@@ -399,7 +409,7 @@ export function InterviewPracticeClient({
 
     useEffect(() => {
         const profileRaw = window.localStorage.getItem(
-            RESUME_INTERVIEW_PROFILE_STORAGE_KEY,
+            profileStorageKey,
         )
         if (profileRaw) {
             try {
@@ -413,13 +423,11 @@ export function InterviewPracticeClient({
         }
 
         const storedValue = window.localStorage.getItem(
-            MARATHON_COMPLETED_STORAGE_KEY,
+            marathonStorageKey,
         )
 
-        if (storedValue === 'true') {
-            setMarathonCompleted(true)
-        }
-    }, [])
+        setMarathonCompleted(storedValue === 'true')
+    }, [profileStorageKey, marathonStorageKey])
 
     useEffect(() => {
         if (!marathonStartedAt || marathonResult) {
@@ -582,7 +590,7 @@ export function InterviewPracticeClient({
             if (evaluation.answeredQuestions === evaluation.totalQuestions) {
                 setMarathonCompleted(true)
                 window.localStorage.setItem(
-                    MARATHON_COMPLETED_STORAGE_KEY,
+                    marathonStorageKey,
                     'true',
                 )
             }
@@ -738,14 +746,7 @@ export function InterviewPracticeClient({
                             先把 {totalQuestionsCountLabel}
                             高频题完整刷一轮，再进入抽卡式答题反复补短板。每次交卷后都会给你总分、模块分和逐题反馈。
                         </p>
-                        <div className="mt-4">
-                            <Link
-                                href="/zhangwenjing-project"
-                                className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-text-main transition-colors hover:bg-primary/20"
-                            >
-                                去张文婧项目深挖单页
-                            </Link>
-                        </div>
+
                     </div>
                     <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur md:block">
                         <div className="text-xs uppercase tracking-[0.28em] text-text-muted">
@@ -758,6 +759,18 @@ export function InterviewPracticeClient({
                 </div>
 
                 <div className="mb-8 flex flex-wrap gap-3">
+                    <button
+                        onClick={() => setActiveMode('company')}
+                        aria-pressed={activeMode === 'company'}
+                        className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
+                            activeMode === 'company'
+                                ? 'border-primary bg-primary/10 text-text-main'
+                                : 'border-white/10 bg-white/[0.04] text-text-muted hover:border-white/20 hover:text-text-main'
+                        }`}
+                    >
+                        <FolderKanban className="h-4 w-4" />
+                        大厂面经
+                    </button>
                     <button
                         onClick={() => setActiveMode('marathon')}
                         className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors ${
@@ -824,22 +837,17 @@ export function InterviewPracticeClient({
                     <span className="mx-1 hidden self-center text-white/20 sm:inline">|</span>
 
                     <Link
-                        href="/project/ziting"
+                        href="/project"
                         className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
                     >
                         <FolderKanban className="h-4 w-4" />
-                        子婷项目深挖
-                    </Link>
-                    <Link
-                        href="/project/wenjing"
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-text-muted transition-colors hover:border-white/20 hover:text-text-main"
-                    >
-                        <FolderKanban className="h-4 w-4" />
-                        文婧项目深挖
+                        {user ? `${user.name}项目深挖` : '登录查看我的项目深挖'}
                     </Link>
                 </div>
 
-                {activeMode === 'marathon' ? (
+                {activeMode === 'company' ? (
+                    <CompanyInterviewPractice banks={companyBanks} />
+                ) : activeMode === 'marathon' ? (
                     <>
                         {!marathonStartedAt && !marathonResult ? (
                             <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
@@ -1130,6 +1138,7 @@ export function InterviewPracticeClient({
                                                             placeholder="先写一版能交卷的答案，后面再回头补低分题。"
                                                             className="mt-4 min-h-[180px] w-full rounded-[24px] border border-white/10 bg-[#0B0C11] p-4 text-sm leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                                         />
+                                <AIQuestionHelp key={question.id} question={question} answer={marathonAnswers[question.id] || ''} />
                                                     </div>
                                                 ))}
                                             </div>
@@ -1373,6 +1382,7 @@ export function InterviewPracticeClient({
                                             placeholder="把它当作正式面试来答。先讲结论，再展开背景、动作、结果和取舍。"
                                             className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                         />
+                                <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                     </div>
 
                                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -1640,6 +1650,7 @@ export function InterviewPracticeClient({
                                                 placeholder="这轮建议你更像正式面试那样答，尽量把场景、判断、动作、结果讲完整。"
                                                 className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                             />
+                                <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                         </div>
 
                                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -1979,6 +1990,7 @@ export function InterviewPracticeClient({
                                             placeholder="建议按“场景/判断/方案/结果”来答。不是每题都要很长，但别只写一句话。"
                                             className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0B0C11] p-5 text-base leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                         />
+                                <AIQuestionHelp key={currentQuestion.id} question={currentQuestion} answer={answers[currentQuestion.id] || ''} />
                                     </div>
 
                                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">

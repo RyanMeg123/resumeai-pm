@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ResumeData, Project, TargetRoleProfile } from '../lib/types';
 import { CircularProgress } from './CircularProgress';
 import { optimizeProject, refineProjectStream } from '../lib/gemini';
@@ -24,24 +24,17 @@ export function DashboardView({
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
 
-  useEffect(() => {
-    const generateVersions = async (project: Project) => {
-      setIsGenerating(true);
-      try {
-        const versions = await optimizeProject(project, targetRoleProfile);
-        onUpdateProject(project.id, { versions });
-      } catch (e) {
-        console.error(e);
-        alert('生成优化版本失败，请重试');
-      } finally {
-        setIsGenerating(false);
-      }
-    };
-
-    if (activeProject && !activeProject.versions && !isGenerating) {
-      generateVersions(activeProject);
-    }
-  }, [activeProject, isGenerating, onUpdateProject, targetRoleProfile]);
+  const generateVersions = async () => {
+    if (!activeProject || isGenerating) return;
+    const project = activeProject;
+    setIsGenerating(true);
+    try {
+      const versions = await optimizeProject(project, targetRoleProfile);
+      onUpdateProject(project.id, { versions });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '生成失败，请稍后手动重试');
+    } finally { setIsGenerating(false); }
+  };
 
   const handleChat = async () => {
     if (!chatInput.trim() || !activeProject || !activeProject.versions) return;
@@ -226,6 +219,7 @@ export function DashboardView({
             </div>
           </div>
 
+          {!activeProject.versions && <div className="px-6 pt-4"><button disabled={isGenerating} onClick={generateVersions} className="rounded-full bg-primary px-5 py-2 text-white disabled:opacity-50">{isGenerating ? '生成中…' : 'AI 生成项目优化版本（按需调用）'}</button><p className="mt-2 text-xs text-text-muted">相同内容复用已保存结果；切换项目不会自动调用。</p></div>}
           {/* Optimization Area */}
           <div className="flex-1 min-h-0 p-6 flex flex-col gap-6 overflow-y-auto">
             <div className="bg-bg-card rounded-xl p-5 border border-border shrink-0 max-h-40 overflow-y-auto">

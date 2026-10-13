@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "organized_on": "2026-10-09",
+  "total_question_count": 146,
+  "counting_rule": "按原文题条及腾讯叙述中明确的问题/追问计数，复合题不无限拆分，含自我介绍与面试官表达要求，排除候选人反问、评论、推荐与JD。",
+  "deduplicated": false,
+  "question_text_mode": "依据采集正文归一化转述，非逐字原题。",
+  "company_banks": [
+    {
+      "company_slug": "bytedance",
+      "company_name": "字节跳动",
+      "file": "bytedance.json",
+      "question_count": 87,
+      "source_document_count": 1,
+      "reported_session_count": 15,
+      "exact_prompt_duplicate_count": 9
+    },
+    {
+      "company_slug": "tencent",
+      "company_name": "腾讯",
+      "file": "tencent.json",
+      "question_count": 14,
+      "source_document_count": 1,
+      "reported_session_count": 2,
+      "exact_prompt_duplicate_count": 0
+    },
+    {
+      "company_slug": "li-auto",
+      "company_name": "理想汽车",
+      "file": "li-auto.json",
+      "question_count": 20,
+      "source_document_count": 1,
+      "reported_session_count": 1,
+      "exact_prompt_duplicate_count": 0
+    },
+    {
+      "company_slug": "futu",
+      "company_name": "富途",
+      "file": "futu.json",
+      "question_count": 10,
+      "source_document_count": 1,
+      "reported_session_count": 1,
+      "exact_prompt_duplicate_count": 0
+    },
+    {
+      "company_slug": "meituan",
+      "company_name": "美团",
+      "file": "meituan.json",
+      "question_count": 15,
+      "source_document_count": 1,
+      "reported_session_count": 1,
+      "exact_prompt_duplicate_count": 0
+    }
+  ]
+}

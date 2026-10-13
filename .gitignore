@@ -12,3 +12,8 @@ scripts/__pycache__/
 .env*
 !.env.example
 .vercel
+
+.practice-data/
+.next-ai-test/
+
+.next-build-check/

@@ -1,8 +1,10 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   outputFileTracingRoot: process.cwd(),
+  outputFileTracingIncludes: { '/*': ['./ai-pm-100-questions.md', './interview-questions/**/*.md', './interview-questions/companies/**/*.json'] },
   eslint: {
     ignoreDuringBuilds: true,
   },

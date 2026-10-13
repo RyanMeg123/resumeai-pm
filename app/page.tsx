@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 
 import { InterviewPracticeClient } from '@/components/InterviewPracticeClient'
 import { loadInterviewQuestionBank } from '@/lib/interview-question-bank'
+import { loadCompanyInterviewBanks } from '@/lib/company-interview-bank'
 
 export const metadata: Metadata = {
     title: 'AI 产品经理面试练习场',
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 export default async function Home() {
     const allQuestions = await loadInterviewQuestionBank()
 
-    return <InterviewPracticeClient allQuestions={allQuestions} />
+    return <InterviewPracticeClient allQuestions={allQuestions} companyBanks={loadCompanyInterviewBanks()} />
 }
