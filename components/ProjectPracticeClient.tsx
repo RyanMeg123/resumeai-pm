@@ -235,7 +235,7 @@ function ResultPanel({
                         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
                             {item.answer || '这题未作答'}
                         </div>
-                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} projectSetId={projectSetId} />
+                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} projectSetId={projectSetId} showMethod={false} />
                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                             <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
                                 <div className="text-sm font-medium">做得好的地方</div>

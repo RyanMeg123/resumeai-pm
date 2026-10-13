@@ -213,7 +213,7 @@ export function CompanyInterviewPractice({ banks }: { banks: CompanyInterviewBan
                     {result.questionResults.map((item) => (
                         <article key={item.questionId} className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
                             <h4 className="text-lg font-medium">{item.prompt}</h4>
-                        <AIQuestionHelp question={{ id: item.questionId, index: 1, prompt: item.prompt, category: item.category }} answer={item.answer} companySlug={bank.slug} />
+                        <AIQuestionHelp question={{ id: item.questionId, index: 1, prompt: item.prompt, category: item.category }} answer={item.answer} companySlug={bank.slug} showMethod={false} />
                             <p className="mt-2 text-sm text-primary">{item.score} 分</p>
                             <p className="mt-4 whitespace-pre-wrap rounded-2xl bg-black/20 p-4 text-sm leading-7">{item.answer}</p>
                             <div className="mt-4 grid gap-4 sm:grid-cols-2">

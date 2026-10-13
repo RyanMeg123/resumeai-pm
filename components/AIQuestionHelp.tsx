@@ -4,10 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { InterviewQuestion } from '@/lib/interview-types'
 import { usePracticeUser } from './PracticeAccount'
+import { LayerChips, MethodCard } from './AnswerLayers'
+import { MAX_FOLLOW_UPS, appendFollowUps, parseLayerReview, type FollowUpRound } from '@/lib/answer-layers'
 
 type Mode = 'reference' | 'review'
 type Saved = { content: string; createdAt: string; model: string }
-export function AIQuestionHelp({ question, answer = '', projectSetId, companySlug }: { question: InterviewQuestion; answer?: string; projectSetId?: string; companySlug?: string }) {
+// showMethod=false 用于一次渲染多题的列表，方法卡由列表顶部统一展示
+export function AIQuestionHelp({ question, answer = '', projectSetId, companySlug, showMethod = true }: { question: InterviewQuestion; answer?: string; projectSetId?: string; companySlug?: string; showMethod?: boolean }) {
     const user = usePracticeUser()
     const [history, setHistory] = useState<Array<Saved & { id: string; answer: string }> | null>(null)
     const [mode, setMode] = useState<Mode>('reference')
@@ -17,8 +20,11 @@ export function AIQuestionHelp({ question, answer = '', projectSetId, companySlu
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [source, setSource] = useState('')
-    const run = async (nextMode: Mode, generate = false) => {
-        const submitted = answer.trim()
+    const [rounds, setRounds] = useState<FollowUpRound[]>([])
+    const [followUpDraft, setFollowUpDraft] = useState('')
+    const fullAnswer = appendFollowUps(answer.trim(), rounds)
+    const run = async (nextMode: Mode, generate = false, override?: string) => {
+        const submitted = override ?? (nextMode === 'review' ? fullAnswer : answer.trim())
         setBusy(true); setError(''); setMissing(false); setRecord(null); setHistory(null); setMode(nextMode)
         try {
             const response = await fetch('/api/ai/question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questionId: question.id, projectSetId, companySlug, prompt: question.prompt, category: question.category, mode: nextMode, answer: submitted, generate }) })
@@ -31,8 +37,15 @@ export function AIQuestionHelp({ question, answer = '', projectSetId, companySlu
         } catch (failure) { setError(failure instanceof Error ? failure.message : '请求失败，未自动重试') }
         finally { setBusy(false) }
     }
-    if (!user) return <p className="mt-4 text-sm text-text-muted"><Link href="/login" className="text-primary">登录后查看 AI 参考与点评</Link>，已有记录免费复用。</p>
-    return <section aria-label={`AI 辅助：${question.prompt}`} className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+    const review = mode === 'review' && record ? parseLayerReview(record.content) : null
+    const answerFollowUp = (prompt: string) => {
+        const nextRounds = [...rounds, { prompt, answer: followUpDraft.trim() }]
+        setRounds(nextRounds); setFollowUpDraft('')
+        void run('review', true, appendFollowUps(answer.trim(), nextRounds))
+    }
+    const method = showMethod && <MethodCard />
+    if (!user) return <>{method}<p className="mt-4 text-sm text-text-muted"><Link href="/login" className="text-primary">登录后查看 AI 参考与点评</Link>，已有记录免费复用。</p></>
+    return <>{method}<section aria-label={`AI 辅助：${question.prompt}`} className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
         <div className="flex flex-wrap gap-3">
             <button type="button" disabled={busy} onClick={() => run('reference')} className="rounded-full border border-primary/30 px-4 py-2 text-sm text-primary disabled:opacity-50">查看参考 / AI 解析</button>
             <button type="button" disabled={busy || answer.trim().length < 5} onClick={() => run('review')} className="rounded-full border border-white/20 px-4 py-2 text-sm disabled:opacity-50">AI 点评我的回答</button>
@@ -54,9 +67,19 @@ export function AIQuestionHelp({ question, answer = '', projectSetId, companySlu
         {history && <div className="mt-3 space-y-2 text-sm">{history.length === 0 ? <p>这道题还没有保存的个人点评。</p> : history.map((item) => <button key={item.id} type="button" className="block w-full rounded-xl border border-white/10 p-3 text-left" onClick={() => { setRecord(item); setReviewedAnswer(item.answer); setMode('review'); setSource('历史记录 · 本次未调用 AI') }}>{new Date(item.createdAt).toLocaleString()} · {item.answer.slice(0, 60)}…</button>)}</div>}
         {record && <div className="mt-4 space-y-3">
             <p className="text-xs text-success">{source}{record.createdAt ? ` · ${new Date(record.createdAt).toLocaleString()}` : ''}</p>
-            {mode === 'review' && <details className="text-sm text-text-muted"><summary>本次点评对应的回答{reviewedAnswer !== answer.trim() ? '（你已修改，需重新查看/分析）' : ''}</summary><p className="mt-2 whitespace-pre-wrap">{reviewedAnswer}</p></details>}
-            <p className="whitespace-pre-wrap text-sm leading-7">{record.content.replace(/^#{1,6} /gm, '').replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+            {mode === 'review' && <details className="text-sm text-text-muted"><summary>本次点评对应的回答{reviewedAnswer !== fullAnswer ? '（你已修改，需重新查看/分析）' : ''}</summary><p className="mt-2 whitespace-pre-wrap">{reviewedAnswer}</p></details>}
+            {review ? <div className="space-y-3">
+                <LayerChips review={review} />
+                <p className="whitespace-pre-wrap text-sm leading-7">{review.feedback}</p>
+                {review.followUp && rounds.length < MAX_FOLLOW_UPS && reviewedAnswer === fullAnswer && <div className="rounded-xl border border-primary/30 p-3">
+                    <p className="text-sm"><span className="text-primary">面试官追问（{review.followUp.layer}）：</span>{review.followUp.prompt}</p>
+                    <textarea value={followUpDraft} onChange={(event) => setFollowUpDraft(event.target.value)} rows={3} aria-label="回答追问" placeholder="补充这一层，尽量给数字和依据" className="mt-2 w-full rounded-xl border border-white/10 bg-transparent p-3 text-sm" />
+                    <button type="button" disabled={busy || followUpDraft.trim().length < 5} onClick={() => answerFollowUp(review.followUp!.prompt)} className="mt-2 rounded-full bg-primary px-4 py-2 text-sm text-white disabled:opacity-50">回答追问并重新点评（消耗额度）</button>
+                    <p className="mt-1 text-xs text-text-muted">第 {rounds.length + 1} / {MAX_FOLLOW_UPS} 轮追问</p>
+                </div>}
+                {review.followUp && rounds.length >= MAX_FOLLOW_UPS && <p className="text-xs text-text-muted">已追问 {MAX_FOLLOW_UPS} 轮。把补充内容整理回主回答，再完整点评一次。</p>}
+            </div> : <p className="whitespace-pre-wrap text-sm leading-7">{record.content.replace(/^#{1,6} /gm, '').replace(/\*\*(.*?)\*\*/g, '$1')}</p>}
             <p className="text-xs text-text-muted">{record.model} · 参考内容请结合真实经历核对。</p>
         </div>}
-    </section>
+    </section></>
 }

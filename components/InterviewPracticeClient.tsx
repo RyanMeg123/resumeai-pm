@@ -1,6 +1,7 @@
 'use client'
 
 import { AIQuestionHelp } from './AIQuestionHelp'
+import { MethodCard } from './AnswerLayers'
 import { usePracticeUser, practiceStorageKey } from '@/components/PracticeAccount'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
@@ -319,7 +320,7 @@ function ResultPanel({
                         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-text-main/90">
                             {item.answer || '这题未作答'}
                         </div>
-                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} />
+                        <AIQuestionHelp question={{ id: item.questionId, index: index + 1, prompt: item.prompt, category: item.category }} answer={item.answer} showMethod={false} />
                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                             <div className="rounded-2xl border border-success/15 bg-success/10 p-4">
                                 <div className="text-sm font-medium">
@@ -1082,6 +1083,7 @@ export function InterviewPracticeClient({
                                                 </button>
                                             </div>
 
+                                            <MethodCard />
                                             <div className="space-y-4">
                                                 {activeMarathonGroup.questions.map((question) => (
                                                     <div
@@ -1138,7 +1140,7 @@ export function InterviewPracticeClient({
                                                             placeholder="先写一版能交卷的答案，后面再回头补低分题。"
                                                             className="mt-4 min-h-[180px] w-full rounded-[24px] border border-white/10 bg-[#0B0C11] p-4 text-sm leading-7 text-text-main outline-none transition-colors placeholder:text-text-muted/70 focus:border-primary"
                                                         />
-                                <AIQuestionHelp key={question.id} question={question} answer={marathonAnswers[question.id] || ''} />
+                                <AIQuestionHelp key={question.id} question={question} answer={marathonAnswers[question.id] || ''} showMethod={false} />
                                                     </div>
                                                 ))}
                                             </div>
